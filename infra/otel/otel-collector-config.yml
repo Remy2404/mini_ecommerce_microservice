@@ -1,0 +1,5 @@
+file_format: yaml
+receivers: {}
+processors: {}
+exporters: {}
+service: {}
