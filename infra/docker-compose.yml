@@ -14,7 +14,7 @@ services:
       - ecommerce-net
 
   valkey:
-    image: valkey/valkey:8
+    image: valkey/valkey:8.1.7
     container_name: ecommerce-valkey
     ports:
       - '6379:6379'

@@ -3,7 +3,12 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
       http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
 
 exporters:
   otlp/jaeger:
@@ -12,12 +17,10 @@ exporters:
       insecure: true
 
   prometheus:
-    endpoint: '0.0.0.0:8889'
+    endpoint: 0.0.0.0:8889
 
   debug:
-
-processors:
-  batch:
+    verbosity: basic
 
 service:
   pipelines:
