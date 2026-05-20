@@ -1,7 +1,7 @@
-"""Messaging topics."""
 from enum import StrEnum
 class ExchangeName(StrEnum):
-    ECOMMERCE = 'ecommerce.exchange'
+    ECOMMERCE = "ecommerce.exchange"
+
 
 class RoutingKey(StrEnum):
     ORDER_CREATED = "order.created"
@@ -10,8 +10,10 @@ class RoutingKey(StrEnum):
     ORDER_CONFIRMED = "order.confirmed"
     ORDER_CANCELLED = "order.cancelled"
     CART_RESTORED = "cart.restored"
+
+
 class QueueName(StrEnum):
-    ORDER_CREATED_QUEUE = "order.created.queue"
-    PAYMENT_RESULT_QUEUE = "payment.result.queue"
-    CART_RESTORE_QUEUE = "cart.restore.queue"
-    DEAD_LETTER_QUEUE = "dead.letter.queue"
+    ORDER_CREATED = "order.created.queue"
+    PAYMENT_RESULT = "payment.result.queue"
+    CART_RESTORE = "cart.restore.queue"
+    DEAD_LETTER = "ecommerce.dead-letter.queue"

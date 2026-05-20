@@ -33,9 +33,8 @@ dependencies = [
     "valkey>=6.1.1",
 ]
 [tool.pytest.ini_options]
-import_mode = "importlib"
+addopts = "--import-mode=importlib"
 pythonpath = ["."]
-
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
