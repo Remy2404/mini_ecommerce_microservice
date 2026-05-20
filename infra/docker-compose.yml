@@ -1,1 +1,127 @@
-version: "3.9"
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: ecommerce-rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: ecommerce
+      RABBITMQ_DEFAULT_PASS: ecommerce
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - ecommerce-net
+
+  valkey:
+    image: valkey/valkey:8
+    container_name: ecommerce-valkey
+    ports:
+      - '6379:6379'
+    command: ['valkey-server', '--appendonly', 'yes']
+    volumes:
+      - valkey-data:/data
+    networks:
+      - ecommerce-net
+
+  postgres-primary:
+    image: postgres:16
+    container_name: ecommerce-postgres-primary
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce
+      POSTGRES_DB: ecommerce
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+
+  postgres-replica:
+    image: postgres:16
+    container_name: ecommerce-postgres-replica
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce
+      POSTGRES_DB: ecommerce
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+    depends_on:
+      - postgres-primary
+    networks:
+      - ecommerce-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.1
+    container_name: ecommerce-otel-collector
+    command: ['--config=/etc/otel-collector-config.yml']
+    volumes:
+      - ./otel/otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+      - '8889:8889'
+    depends_on:
+      - jaeger
+    networks:
+      - ecommerce-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: ecommerce-jaeger
+    ports:
+      - '16686:16686'
+      - '14250:14250'
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    networks:
+      - ecommerce-net
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: ecommerce-prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - ecommerce-net
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: ecommerce-grafana
+    ports:
+      - '3000:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - ecommerce-net
+
+  wso2:
+    image: wso2/wso2is:7.0.0
+    container_name: ecommerce-wso2
+    ports:
+      - '9443:9443'
+    profiles:
+      - identity
+    networks:
+      - ecommerce-net
+
+volumes:
+  rabbitmq-data:
+  valkey-data:
+  postgres-primary-data:
+  postgres-replica-data:
+  grafana-data:
+
+networks:
+  ecommerce-net:
+    driver: bridge
