@@ -10,29 +10,16 @@ from packages.contracts.events import (
     PaymentSuccessEvent,
     PaymentSuccessPayload,
 )
-from packages.contracts.topics import (
-    QueueName,
-    RoutingKey,
-)
-from packages.messaging.broker import (
-    broker,
-    ecommerce_exchange,
-    order_created_queue,
-)
-from packages.observability.logging import (
-    get_logger,
-    setup_logging,
-)
+from packages.contracts.topics import QueueName, RoutingKey
+from packages.messaging.broker import broker, ecommerce_exchange, order_created_queue
+from packages.observability.logging import get_logger, setup_logging
 from packages.observability.metrics import (
     payment_failed_total,
     payment_success_total,
     rabbitmq_message_consumed_total,
     rabbitmq_message_published_total,
 )
-from packages.observability.tracing import (
-    add_span_attributes,
-    setup_tracing,
-)
+from packages.observability.tracing import add_span_attributes, setup_tracing
 
 setup_logging(settings.payment_service_name)
 setup_tracing(settings.payment_service_name)
@@ -44,17 +31,7 @@ logger = get_logger(__name__)
     queue=order_created_queue,
     exchange=ecommerce_exchange,
 )
-@broker.publisher(
-    exchange=ecommerce_exchange,
-    routing_key=RoutingKey.PAYMENT_SUCCESS,
-)
-@broker.publisher(
-    exchange=ecommerce_exchange,
-    routing_key=RoutingKey.PAYMENT_FAILED,
-)
-async def process_payment(
-    event: OrderCreatedEvent,
-):
+async def process_payment(event: OrderCreatedEvent) -> None:
     rabbitmq_message_consumed_total.labels(
         service_name=settings.payment_service_name,
         routing_key=RoutingKey.ORDER_CREATED,
@@ -64,10 +41,14 @@ async def process_payment(
         "Order created event received",
         order_id=str(event.payload.order_id),
         user_id=event.payload.user_id,
+        amount=str(event.payload.amount),
     )
 
     await asyncio.sleep(
-        random.uniform(1, 2),
+        random.uniform(
+            settings.payment_min_delay_ms / 1000,
+            settings.payment_max_delay_ms / 1000,
+        )
     )
 
     is_success = random.random() <= settings.payment_success_rate
@@ -82,12 +63,21 @@ async def process_payment(
 
     if is_success:
         payment_event = PaymentSuccessEvent(
+            correlation_id=event.correlation_id,
+            trace_id=event.trace_id,
             payload=PaymentSuccessPayload(
                 payment_id=uuid4(),
                 order_id=event.payload.order_id,
                 user_id=event.payload.user_id,
                 amount=event.payload.amount,
-            )
+                currency=event.payload.currency,
+            ),
+        )
+
+        await broker.publish(
+            message=payment_event.model_dump(mode="json"),
+            exchange=ecommerce_exchange,
+            routing_key=RoutingKey.PAYMENT_SUCCESS,
         )
 
         payment_success_total.labels(
@@ -100,21 +90,31 @@ async def process_payment(
         ).inc()
 
         logger.info(
-            "Payment succeeded",
+            "Payment success event published",
             order_id=str(event.payload.order_id),
-            user_id=event.payload.user_id,
+            payment_id=str(payment_event.payload.payment_id),
+            routing_key=RoutingKey.PAYMENT_SUCCESS,
         )
 
-        return payment_event
+        return
 
     payment_event = PaymentFailedEvent(
+        correlation_id=event.correlation_id,
+        trace_id=event.trace_id,
         payload=PaymentFailedPayload(
             payment_id=uuid4(),
             order_id=event.payload.order_id,
             user_id=event.payload.user_id,
             amount=event.payload.amount,
-            reason="Insufficient balance",
-        )
+            currency=event.payload.currency,
+            reason="Simulated payment failure",
+        ),
+    )
+
+    await broker.publish(
+        message=payment_event.model_dump(mode="json"),
+        exchange=ecommerce_exchange,
+        routing_key=RoutingKey.PAYMENT_FAILED,
     )
 
     payment_failed_total.labels(
@@ -127,12 +127,11 @@ async def process_payment(
     ).inc()
 
     logger.warning(
-        "Payment failed",
+        "Payment failed event published",
         order_id=str(event.payload.order_id),
-        user_id=event.payload.user_id,
+        payment_id=str(payment_event.payload.payment_id),
+        routing_key=RoutingKey.PAYMENT_FAILED,
     )
-
-    return payment_event
 
 
 async def main() -> None:

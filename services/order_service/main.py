@@ -1,4 +1,4 @@
-"""Order service entrypoint."""
+"""Order service entrypoint. main """
 
 import random
 from decimal import Decimal
@@ -18,6 +18,11 @@ from packages.observability.metrics import (
 )
 from packages.observability.tracing import setup_tracing
 from packages.observability.tracing import add_span_attributes
+from services.order_service.state import (
+    get_all_orders,
+    get_order_status,
+    save_order_status,
+)
 
 app = FastAPI(
     title="Order Service",
@@ -96,6 +101,11 @@ async def create_order() -> ApiResponse[dict[str, str]]:
         routing_key=RoutingKey.ORDER_CREATED,
     ).inc()
 
+    save_order_status(
+        order_id=str(order_id),
+        status=OrderStatus.PENDING,
+    )
+
     logger.info(
         "Order created event published",
         order_id=str(order_id),
@@ -111,3 +121,34 @@ async def create_order() -> ApiResponse[dict[str, str]]:
             "status": OrderStatus.PENDING,
         },
     )
+
+
+@app.get('/orders/{order_id}')
+async def get_order(order_id: str) -> ApiResponse[dict[str, str]]:
+    order_status = get_order_status(order_id)
+
+    if order_status is None:
+        return ApiResponse[dict[str, str]](
+            success=False,
+            message='Order not found',
+            data=None,
+        )
+
+    return ApiResponse[dict[str, str]](
+        success=True,
+        message='Order fetched successfully',
+        data={
+            'order_id': order_id,
+            'status': order_status,
+        },
+    )
+
+
+@app.get('/orders')
+async def list_orders() -> ApiResponse[dict[str, str]]:
+    return ApiResponse[dict[str, str]](
+        success=True,
+        message='Orders fetched successfully',
+        data=get_all_orders(),
+)
+
