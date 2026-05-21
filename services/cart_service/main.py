@@ -13,6 +13,8 @@ from services.cart_service.service import (
     delete_cart_item,
     find_cart,
 )
+from prometheus_client import make_asgi_app
+from packages.observability.http_metrics import HTTPMetricsMiddleware
 
 app = FastAPI(
     title="Cart Service",
@@ -20,6 +22,9 @@ app = FastAPI(
 
 setup_logging(settings.cart_service_name)
 setup_tracing(settings.cart_service_name, app)
+
+app.mount("/metrics", make_asgi_app())
+app.add_middleware(HTTPMetricsMiddleware, service_name=settings.cart_service_name)
 
 logger = get_logger(__name__)
 

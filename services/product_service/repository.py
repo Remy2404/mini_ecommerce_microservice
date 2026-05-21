@@ -5,6 +5,8 @@ from uuid import UUID
 from packages.cache.valkey_client import get_valkey_client
 from services.product_service.schemas import ProductResponse
 
+from packages.config.settings import settings
+
 PRODUCT_KEY_PREFIX = "product"
 PRODUCT_INDEX_KEY = "products:index"
 
@@ -22,6 +24,7 @@ def save_product(product: ProductResponse) -> None:
     client.set(
         _product_key(str(product.product_id)),
         json.dumps(payload),
+        ex=settings.product_cache_ttl_seconds,
     )
 
     client.sadd(

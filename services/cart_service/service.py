@@ -19,11 +19,7 @@ def add_item_to_cart(request: AddCartItemRequest) -> CartResponse:
 
     items = list(cart.items)
     existing_item_index = next(
-        (
-            index
-            for index, item in enumerate(items)
-            if item.product_id == request.product_id
-        ),
+        (index for index, item in enumerate(items) if item.product_id == request.product_id),
         None,
     )
 

@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 
 from packages.config.settings import settings
 from packages.contracts.events import OrderCreatedEvent, OrderCreatedPayload
@@ -28,12 +28,18 @@ from services.order_service.cart_reader import (
 )
 from services.order_service.schemas import CreateOrderRequest
 
+from prometheus_client import make_asgi_app
+from packages.observability.http_metrics import HTTPMetricsMiddleware
+
 app = FastAPI(
     title="Order Service",
 )
 
 setup_logging(settings.order_service_name)
 setup_tracing(settings.order_service_name, app)
+
+app.mount("/metrics", make_asgi_app())
+app.add_middleware(HTTPMetricsMiddleware, service_name=settings.order_service_name)
 
 logger = get_logger(__name__)
 
@@ -74,17 +80,15 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
     try:
         amount = get_cart_total_amount(user_id)
     except CartNotFoundError:
-        return ApiResponse[dict[str, str]](
-            success=False,
-            message="Cart not found",
-            data=None,
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cart not found",
         )
     except EmptyCartError:
-        return ApiResponse[dict[str, str]](
-            success=False,
-            message="Cart is empty",
-            data=None,
-    )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cart is empty",
+        )
 
     event = OrderCreatedEvent(
         payload=OrderCreatedPayload(
@@ -145,10 +149,9 @@ async def get_order(order_id: str) -> ApiResponse[dict[str, str]]:
     order_status = get_order_status(order_id)
 
     if order_status is None:
-        return ApiResponse[dict[str, str]](
-            success=False,
-            message='Order not found',
-            data=None,
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
         )
 
     return ApiResponse[dict[str, str]](

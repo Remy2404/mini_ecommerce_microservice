@@ -8,6 +8,7 @@ from packages.messaging.broker import broker, ecommerce_exchange, payment_result
 from packages.observability.logging import get_logger, setup_logging
 from packages.observability.metrics import order_cancelled_total, order_confirmed_total
 from packages.observability.tracing import add_span_attributes, setup_tracing
+from packages.cache.valkey_client import get_valkey_client
 from services.order_service.state import save_order_status
 
 setup_logging(settings.order_service_name)
@@ -37,6 +38,23 @@ async def handle_payment_result(
             order_id=order_id,
             status=OrderStatus.CONFIRMED,
         )
+
+        # Clear the user's cart on payment success
+        try:
+            valkey_client = get_valkey_client()
+            valkey_client.delete(f"cart:{event.payload.user_id}")
+            logger.info(
+                "Cart cleared on payment success",
+                user_id=event.payload.user_id,
+                order_id=order_id,
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to clear cart on payment success",
+                user_id=event.payload.user_id,
+                order_id=order_id,
+                error=str(e),
+            )
 
         order_confirmed_total.labels(
             service_name=settings.order_service_name,

@@ -1,12 +1,14 @@
 from uuid import UUID
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 
 from packages.config.settings import settings
 from packages.contracts.schemas import ApiResponse
 from packages.observability.logging import get_logger, setup_logging
 from packages.observability.tracing import add_span_attributes, setup_tracing
 from services.product_service.schemas import CreateProductRequest, ProductResponse
+from prometheus_client import make_asgi_app
+from packages.observability.http_metrics import HTTPMetricsMiddleware
 from services.product_service.service import create_product, find_product, find_products
 
 app = FastAPI(
@@ -16,7 +18,11 @@ app = FastAPI(
 setup_logging(settings.product_service_name)
 setup_tracing(settings.product_service_name, app)
 
+app.mount("/metrics", make_asgi_app())
+app.add_middleware(HTTPMetricsMiddleware, service_name=settings.product_service_name)
+
 logger = get_logger(__name__)
+
 
 
 @app.get("/health")
@@ -81,10 +87,9 @@ async def get_product_endpoint(
     product = find_product(product_id)
 
     if product is None:
-        return ApiResponse[ProductResponse](
-            success=False,
-            message="Product not found",
-            data=None,
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
         )
 
     return ApiResponse[ProductResponse](

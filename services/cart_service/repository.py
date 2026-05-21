@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from packages.cache.valkey_client import get_valkey_client
+from packages.config.settings import settings
 from services.cart_service.schemas import CartItemResponse, CartResponse
 
 CART_KEY_PREFIX = "cart"
@@ -25,6 +26,7 @@ def save_cart(cart: CartResponse) -> None:
     client.set(
         _cart_key(cart.user_id),
         json.dumps(payload),
+        ex=settings.cart_cache_ttl_seconds,
     )
 
 
