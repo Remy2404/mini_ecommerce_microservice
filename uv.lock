@@ -661,7 +661,6 @@ dependencies = [
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-instrumentation-faststream" },
     { name = "opentelemetry-sdk" },
     { name = "orjson" },
     { name = "prometheus-client" },
@@ -697,7 +696,6 @@ requires-dist = [
     { name = "opentelemetry-api", specifier = ">=1.42.0" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.42.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.63b0" },
-    { name = "opentelemetry-instrumentation-faststream", specifier = ">=0.1.3" },
     { name = "opentelemetry-sdk", specifier = ">=1.42.0" },
     { name = "orjson", specifier = ">=3.11.9" },
     { name = "prometheus-client", specifier = ">=0.25.0" },
@@ -935,20 +933,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/51/73/6e44cd21b17d4affd41a621804421d476940b1dab352254b1a9c08a08df6/opentelemetry_instrumentation_fastapi-0.63b0.tar.gz", hash = "sha256:5117df842d0ce47e1fb9eb3c2ad2a7594bd139b129de9f3fa1ce5b28e970c046", size = 25387 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/78/2d/f869b45eddbb7332cce7a863a4d1e758d58a9c890db6dbf0fe6aedd3eda1/opentelemetry_instrumentation_fastapi-0.63b0-py3-none-any.whl", hash = "sha256:ed43d2358164df83d811a8d69a7578cad3ab66fde4db027296c1ee20f703e3f0", size = 12797 },
-]
-
-[[package]]
-name = "opentelemetry-instrumentation-faststream"
-version = "0.1.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/95/a1009dec6b4980957315d4ef136b24d18c55d8d7cda4e6fab3d37b01d177/opentelemetry_instrumentation_faststream-0.1.3.tar.gz", hash = "sha256:cb56d3ab3d39977a9ee43be48e24c67ee7e3db102295dd20221116bb45ae1538", size = 5990 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/68/21/9a69eaa366265c76a6dbf05b3069b315e355cc4cd768147d9c06d0c012ba/opentelemetry_instrumentation_faststream-0.1.3-py3-none-any.whl", hash = "sha256:bfeea723453e6553873962744a9d74c636eb590b030573844ca6b1be4fa0938a", size = 6737 },
 ]
 
 [[package]]
