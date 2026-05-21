@@ -1,7 +1,5 @@
 """Order service entrypoint. main """
 
-import random
-from decimal import Decimal
 from uuid import uuid4
 
 from fastapi import FastAPI, status
@@ -23,6 +21,12 @@ from services.order_service.state import (
     get_order_status,
     save_order_status,
 )
+from services.order_service.cart_reader import (
+    CartNotFoundError,
+    EmptyCartError,
+    get_cart_total_amount,
+)
+from services.order_service.schemas import CreateOrderRequest
 
 app = FastAPI(
     title="Order Service",
@@ -62,12 +66,25 @@ async def health() -> dict[str, str]:
     "/orders",
     status_code=status.HTTP_201_CREATED,
 )
-async def create_order() -> ApiResponse[dict[str, str]]:
+async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str]]:
     order_id = uuid4()
-    user_id = f"user_{random.randint(100, 999)}"
+    user_id = request.user_id
     cart_id = f"cart_{user_id}"
 
-    amount = Decimal("99.98")
+    try:
+        amount = get_cart_total_amount(user_id)
+    except CartNotFoundError:
+        return ApiResponse[dict[str, str]](
+            success=False,
+            message="Cart not found",
+            data=None,
+        )
+    except EmptyCartError:
+        return ApiResponse[dict[str, str]](
+            success=False,
+            message="Cart is empty",
+            data=None,
+    )
 
     event = OrderCreatedEvent(
         payload=OrderCreatedPayload(
@@ -151,4 +168,3 @@ async def list_orders() -> ApiResponse[dict[str, str]]:
         message='Orders fetched successfully',
         data=get_all_orders(),
 )
-
