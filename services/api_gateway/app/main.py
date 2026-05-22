@@ -6,6 +6,8 @@ from packages.observability.http_metrics import HTTPMetricsMiddleware
 from packages.observability.logging import setup_logging
 from services.api_gateway.app.middleware.error_handler import ErrorHandlerMiddleware
 from services.api_gateway.app.middleware.logging import LoggingMiddleware
+from services.api_gateway.app.routers.auth_routes import router as auth_routes_router
+from services.api_gateway.app.routers.gateway_routes import router as gateway_routes_router
 from services.api_gateway.app.routers.proxy import router
 
 setup_logging(settings.api_gateway_service_name)
@@ -23,10 +25,12 @@ app.add_middleware(
 )
 app.add_middleware(LoggingMiddleware)
 
+app.include_router(auth_routes_router)
+app.include_router(gateway_routes_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 
 
-@app.get("/health")
+@app.get("/health", tags=["Gateway Health"])
 async def health() -> dict[str, str]:
     return {
         "status": "ok",

@@ -26,10 +26,24 @@ class Settings(BaseSettings):
     rabbitmq_url: str = Field(..., validation_alias="RABBITMQ_URL")
     rabbitmq_exchange: str = Field(..., validation_alias="RABBITMQ_EXCHANGE")
     # WSO2 Identity Server settings
-    wso2_base_url: str = Field(..., validation_alias="WSO2_BASE_URL")
-    wso2_issuer: str = Field(..., validation_alias="WSO2_ISSUER")
-    wso2_audience: str = Field(..., validation_alias="WSO2_AUDIENCE")
-    wso2_jwks_url: str = Field(..., validation_alias="WSO2_JWKS_URL")
+    wso2_base_url: str = Field("https://localhost:9443", validation_alias="WSO2_BASE_URL")
+    wso2_issuer: str = Field(
+        "https://localhost:9443/oauth2/token",
+        validation_alias="WSO2_ISSUER",
+    )
+    wso2_audience: str = Field("mini-ecommerce-api", validation_alias="WSO2_AUDIENCE")
+    wso2_jwks_url: str = Field(
+        "https://localhost:9443/oauth2/jwks",
+        validation_alias="WSO2_JWKS_URL",
+    )
+    wso2_token_url: str = Field(
+        "https://localhost:9443/oauth2/token",
+        validation_alias="WSO2_TOKEN_URL",
+    )
+    wso2_introspection_url: str = Field(
+        "https://localhost:9443/oauth2/introspect",
+        validation_alias="WSO2_INTROSPECTION_URL",
+    )
     wso2_client_id: str = Field(..., validation_alias="WSO2_CLIENT_ID")
     wso2_client_secret: str = Field(..., validation_alias="WSO2_CLIENT_SECRET")
 
@@ -85,7 +99,11 @@ class Settings(BaseSettings):
         10.0,
         validation_alias="GATEWAY_REQUEST_TIMEOUT_SECONDS",
     )
-    wso2_verify_ssl: bool = Field(True, validation_alias="WSO2_VERIFY_SSL")
+    wso2_request_timeout_seconds: float = Field(
+        10.0,
+        validation_alias="WSO2_REQUEST_TIMEOUT_SECONDS",
+    )
+    wso2_verify_ssl: bool = Field(False, validation_alias="WSO2_VERIFY_SSL")
     gateway_rate_limit_enabled: bool = Field(
         False,
         validation_alias="GATEWAY_RATE_LIMIT_ENABLED",

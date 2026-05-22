@@ -71,9 +71,16 @@ def _forward_response_headers(upstream: httpx.Response) -> dict[str, str]:
     }
 
 
-async def _proxy(request: Request, base_url: str, service: str, path: str) -> Response:
+async def forward_request(service_name: str, path: str, request: Request) -> Response:
     """Forward a gateway request to the configured downstream service."""
-    url = _build_downstream_url(base_url, service, path)
+    base_url = _get_base_url(service_name)
+    if not base_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown service",
+        )
+
+    url = _build_downstream_url(base_url, service_name, path)
 
     try:
         async with httpx.AsyncClient(
@@ -114,6 +121,7 @@ async def _proxy(request: Request, base_url: str, service: str, path: str) -> Re
 @router.api_route(
     "/{service}{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    include_in_schema=False,
 )
 async def gateway(
     service: str,
@@ -123,11 +131,4 @@ async def gateway(
 ):
     await rate_limit(request, payload)
 
-    base = _get_base_url(service)
-    if not base:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Unknown service",
-        )
-
-    return await _proxy(request, base, service, path)
+    return await forward_request(service, path, request)

@@ -15,6 +15,52 @@ curl.exe -i http://127.0.0.1:8000/api/v1/orders
 ## Run test : `uv run pytest tests`
 ## Run test with coverage : `uv run pytest --cov=services tests`
 
+## API Gateway auth
+
+Local development can run without WSO2 token validation:
+
+### Run with WSO2 auth disabled
+
+```powershell
+$env:GATEWAY_AUTH_ENABLED = "false"
+uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
+curl.exe http://localhost:8000/health
+```
+
+Protected local mode validates Bearer tokens against WSO2 Identity Server:
+
+### Run with WSO2 auth enabled
+
+```powershell
+$env:GATEWAY_AUTH_ENABLED = "true"
+$env:WSO2_BASE_URL = "https://localhost:9443"
+$env:WSO2_ISSUER = "https://localhost:9443/oauth2/token"
+$env:WSO2_AUDIENCE = "mini-ecommerce-api"
+$env:WSO2_JWKS_URL = "https://localhost:9443/oauth2/jwks"
+$env:WSO2_INTROSPECTION_URL = "https://localhost:9443/oauth2/introspect"
+$env:WSO2_VERIFY_SSL = "false"
+$env:WSO2_REQUEST_TIMEOUT_SECONDS = "10"
+uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
+```
+
+Protected gateway routes require the access token from `/auth/login`:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+If WSO2 returns an opaque access token, the gateway validates it through the WSO2 introspection endpoint. JWT bearer tokens are still validated through JWKS. In Swagger UI, paste the raw `access_token` value into Authorize; Swagger adds `Bearer` for you. Do not use the `id_token` as the API bearer token.
+
+Swagger also exposes the WSO2 username/password login endpoint:
+
+```powershell
+curl.exe -i -X POST http://localhost:8000/auth/login `
+  -H "Content-Type: application/json" `
+  -d "{\"username\":\"admin\",\"password\":\"admin\",\"scope\":\"openid profile email\"}"
+```
+
+Use `WSO2_VERIFY_SSL=false` only for the default local self-signed WSO2 certificate. Production should run with `GATEWAY_AUTH_ENABLED=true` and `WSO2_VERIFY_SSL=true`. See [docs/wso2-local-setup.md](docs/wso2-local-setup.md) for setup steps.
+
 | Phase                               |                  Status | Meaning                                                               |
 | ----------------------------------- | ----------------------: | --------------------------------------------------------------------- |
 | Phase 1: Core infra                 |                  ✅ Done | Docker, RabbitMQ, Valkey, OTEL Collector, Jaeger, Prometheus, Grafana |
