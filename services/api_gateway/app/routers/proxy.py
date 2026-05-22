@@ -1,45 +1,118 @@
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from app.dependencies.auth import validate_token
-from app.dependencies.rate_limit import rate_limit
-from app.config import settings
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
+
+from packages.config.settings import settings
+from services.api_gateway.app.dependencies.auth import validate_token
+from services.api_gateway.app.dependencies.rate_limit import rate_limit
 
 router = APIRouter()
 
 SERVICE_MAP = {
-    "users":    settings.USER_SERVICE_URL,
-    "orders":   settings.ORDER_SERVICE_URL,
-    "products": settings.PRODUCT_SERVICE_URL,
+    "products": "product_service_url",
+    "cart": "cart_service_url",
+    "orders": "order_service_url",
 }
 
-async def _proxy(request: Request, base_url: str, service: str) -> Response:
-    """Forward the request to a downstream service, preserving method/body/headers."""
-    full_path = request.url.path                        # /api/v1/products  or  /api/v1/products/123
-    stripped  = full_path.split(f"/{service}", 1)[-1]  # ""                or  "/123"
-    url       = f"{base_url}/{service}{stripped}"       # http://localhost:8003/products
+HOP_BY_HOP_HEADERS = {
+    "connection",
+    "keep-alive",
+    "proxy-authenticate",
+    "proxy-authorization",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+}
 
-    headers = dict(request.headers)
-    headers.pop("host", None)
+REQUEST_HEADERS_TO_DROP = HOP_BY_HOP_HEADERS | {
+    "host",
+    "content-length",
+    "x-request-id",
+}
 
-    async with httpx.AsyncClient() as client:
-        upstream = await client.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=await request.body(),
-            params=request.query_params,
-            timeout=10.0,
+RESPONSE_HEADERS_TO_DROP = HOP_BY_HOP_HEADERS | {
+    "content-length",
+}
+
+
+def _get_base_url(service: str) -> str | None:
+    setting_name = SERVICE_MAP.get(service)
+    if setting_name is None:
+        return None
+
+    return getattr(settings, setting_name)
+
+
+def _build_downstream_url(base_url: str, service: str, path: str) -> str:
+    suffix = path if path.startswith("/") else f"/{path}" if path else ""
+    return f"{base_url.rstrip('/')}/{service}{suffix}"
+
+
+def _forward_request_headers(request: Request) -> dict[str, str]:
+    headers = {
+        key: value
+        for key, value in request.headers.items()
+        if key.lower() not in REQUEST_HEADERS_TO_DROP
+    }
+
+    request_id = getattr(request.state, "request_id", None)
+    if request_id:
+        headers["X-Request-ID"] = request_id
+
+    return headers
+
+
+def _forward_response_headers(upstream: httpx.Response) -> dict[str, str]:
+    return {
+        key: value
+        for key, value in upstream.headers.items()
+        if key.lower() not in RESPONSE_HEADERS_TO_DROP
+    }
+
+
+async def _proxy(request: Request, base_url: str, service: str, path: str) -> Response:
+    """Forward a gateway request to the configured downstream service."""
+    url = _build_downstream_url(base_url, service, path)
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=settings.gateway_request_timeout_seconds,
+        ) as client:
+            upstream = await client.request(
+                method=request.method,
+                url=url,
+                headers=_forward_request_headers(request),
+                content=await request.body(),
+                params=request.query_params,
+            )
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Downstream service unavailable"},
+        )
+    except httpx.HTTPError:
+        return JSONResponse(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            content={"detail": "Downstream service error"},
+        )
+
+    if upstream.status_code >= 500:
+        return JSONResponse(
+            status_code=upstream.status_code,
+            content={"detail": "Downstream service error"},
         )
 
     return Response(
         content=upstream.content,
         status_code=upstream.status_code,
-        headers=dict(upstream.headers),
+        headers=_forward_response_headers(upstream),
         media_type=upstream.headers.get("content-type"),
     )
 
+
 @router.api_route(
-    "/{service}{path:path}",    # ← removed the slash between {service} and {path:path}
+    "/{service}{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
 )
 async def gateway(
@@ -50,8 +123,11 @@ async def gateway(
 ):
     await rate_limit(request, payload)
 
-    base = SERVICE_MAP.get(service)
+    base = _get_base_url(service)
     if not base:
-        raise HTTPException(status_code=404, detail=f"Unknown service: {service}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown service",
+        )
 
-    return await _proxy(request, base, service)
+    return await _proxy(request, base, service, path)

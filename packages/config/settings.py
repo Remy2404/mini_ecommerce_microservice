@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     otel_traces_sampler: str = Field("parentbased_always_on", validation_alias="OTEL_TRACES_SAMPLER")
 
     # Service names
-    api_gateway: str = Field(..., validation_alias="API_GATEWAY_SERVICE_NAME")
+    api_gateway_service_name: str = Field(..., validation_alias="API_GATEWAY_SERVICE_NAME")
     product_service_name: str = Field(..., validation_alias="PRODUCT_SERVICE_NAME")
     cart_service_name: str = Field(..., validation_alias="CART_SERVICE_NAME")
     order_service_name: str = Field(..., validation_alias="ORDER_SERVICE_NAME")
@@ -78,6 +78,22 @@ class Settings(BaseSettings):
     cart_service_url: str = Field(..., validation_alias="CART_SERVICE_URL")
     order_service_url: str = Field(..., validation_alias="ORDER_SERVICE_URL")
     payment_service_url: str = Field(..., validation_alias="PAYMENT_SERVICE_URL")
+
+    # API Gateway settings
+    gateway_auth_enabled: bool = Field(False, validation_alias="GATEWAY_AUTH_ENABLED")
+    gateway_request_timeout_seconds: float = Field(
+        10.0,
+        validation_alias="GATEWAY_REQUEST_TIMEOUT_SECONDS",
+    )
+    wso2_verify_ssl: bool = Field(True, validation_alias="WSO2_VERIFY_SSL")
+    gateway_rate_limit_enabled: bool = Field(
+        False,
+        validation_alias="GATEWAY_RATE_LIMIT_ENABLED",
+    )
+    gateway_rate_limit_per_minute: int = Field(
+        60,
+        validation_alias="GATEWAY_RATE_LIMIT_PER_MINUTE",
+    )
 
     # jwt settings
     jwt_algorithm: str = Field(..., validation_alias="JWT_ALGORITHM")
@@ -123,6 +139,11 @@ class Settings(BaseSettings):
             for origin in self.cors_allowed_origins.split(',')
             if origin.strip()
         ]
+
+    @property
+    def api_gateway(self) -> str:
+        """Backward-compatible alias for existing service-name references."""
+        return self.api_gateway_service_name
 
 
 @lru_cache

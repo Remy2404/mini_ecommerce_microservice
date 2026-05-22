@@ -1,8 +1,16 @@
 ## Run docker : `docker compose -f infra/docker-compose.yml up -d`
 ## Cancel docker : `docker compose -f infra/docker-compose.yml down`
-## Run order service : `uv run uvicorn services.order_service.main:app --reload --port 8003`
-## Run payment service :  `uv run python -m services.payment_service.consumers`
-## Run order service : `uv run python -m services.order_service.consumers`
+uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
+uv run uvicorn services.product_service.main:app --reload --port 8001
+uv run uvicorn services.cart_service.main:app --reload --port 8002
+uv run uvicorn services.order_service.main:app --reload --port 8003
+
+
+curl.exe -i http://127.0.0.1:8000/health
+curl.exe -i http://127.0.0.1:8000/metrics/
+curl.exe -i http://127.0.0.1:8000/api/v1/products
+curl.exe -i http://127.0.0.1:8000/api/v1/cart/user_123
+curl.exe -i http://127.0.0.1:8000/api/v1/orders
 
 ## Run test : `uv run pytest tests`
 ## Run test with coverage : `uv run pytest --cov=services tests`

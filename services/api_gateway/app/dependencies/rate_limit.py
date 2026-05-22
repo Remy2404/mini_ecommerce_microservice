@@ -1,13 +1,41 @@
-import redis.asyncio as aioredis
 from fastapi import HTTPException, Request
-from app.config import settings
+import valkey.asyncio as valkey
 
-_redis = aioredis.from_url(settings.REDIS_URL)
+from packages.config.settings import settings
 
-async def rate_limit(request: Request, token_payload: dict):
-    key = f"rl:{token_payload['sub']}"
-    count = await _redis.incr(key)
+_valkey_client: valkey.Valkey | None = None
+
+
+def get_rate_limit_client() -> valkey.Valkey:
+    global _valkey_client
+
+    if _valkey_client is None:
+        _valkey_client = valkey.from_url(
+            settings.valkey_url,
+            decode_responses=True,
+        )
+
+    return _valkey_client
+
+
+async def rate_limit(request: Request, token_payload: dict) -> None:
+    if not settings.gateway_rate_limit_enabled:
+        return
+
+    subject = token_payload.get("sub", "anonymous")
+    key = f"gateway:rl:{subject}"
+    client = get_rate_limit_client()
+
+    try:
+        count = await client.incr(key)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Gateway rate limiter unavailable",
+        ) from exc
+
     if count == 1:
-        await _redis.expire(key, settings.RATE_LIMIT_WINDOW)
-    if count > settings.RATE_LIMIT_REQUESTS:
+        await client.expire(key, settings.rate_limit_ttl_seconds)
+
+    if count > settings.gateway_rate_limit_per_minute:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
