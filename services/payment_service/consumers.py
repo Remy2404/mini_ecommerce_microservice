@@ -1,149 +1,118 @@
+"""Payment consumer."""
+
 import asyncio
 import random
-from uuid import uuid4
+import uuid
 
-from packages.config.settings import settings
-from packages.contracts.events import (
-    OrderCreatedEvent,
-    PaymentFailedEvent,
-    PaymentFailedPayload,
-    PaymentSuccessEvent,
-    PaymentSuccessPayload,
+from datetime import datetime
+
+from faststream import FastStream
+
+from packages.database.session import AsyncSessionLocal
+from packages.messaging.broker import (
+    broker,
+    ecommerce_exchange,
 )
-from packages.contracts.topics import QueueName, RoutingKey
-from packages.messaging.broker import broker, ecommerce_exchange, order_created_queue
-from packages.observability.logging import get_logger, setup_logging
-from packages.observability.metrics import (
-    payment_failed_total,
-    payment_success_total,
-    rabbitmq_message_consumed_total,
-    rabbitmq_message_published_total,
+# payment consumer
+from packages.messaging.broker import (
+    broker,
+    ecommerce_exchange,
+    payment_order_created_queue,  # ✅ import the RabbitQueue object
 )
-from packages.observability.tracing import add_span_attributes, setup_tracing
+from packages.contracts.topics import RoutingKey
 
-setup_logging(settings.payment_service_name)
-setup_tracing(settings.payment_service_name)
-
-logger = get_logger(__name__)
-
+from .service import PaymentService
+from .repository import PaymentRepository
+from packages.config.settings import settings 
 
 @broker.subscriber(
-    queue=order_created_queue,
+    queue=payment_order_created_queue,    # ✅ RabbitQueue, not a string
     exchange=ecommerce_exchange,
 )
-async def process_payment(event: OrderCreatedEvent) -> None:
-    rabbitmq_message_consumed_total.labels(
-        service_name=settings.payment_service_name,
-        routing_key=RoutingKey.ORDER_CREATED,
-    ).inc()
+async def process_payment(msg: dict):
 
-    logger.info(
-        "Order created event received",
-        order_id=str(event.payload.order_id),
-        user_id=event.payload.user_id,
-        amount=str(event.payload.amount),
-    )
+    try:
 
-    await asyncio.sleep(
-        random.uniform(
-            settings.payment_min_delay_ms / 1000,
-            settings.payment_max_delay_ms / 1000,
-        )
-    )
+        print("Payment service received:", msg)
 
-    is_success = random.random() <= settings.payment_success_rate
+        await asyncio.sleep(random.randint(1, 3))
 
-    add_span_attributes(
-        {
-            "order.id": str(event.payload.order_id),
-            "user.id": event.payload.user_id,
-            "payment.success": is_success,
-        }
-    )
-
-    if is_success:
-        payment_event = PaymentSuccessEvent(
-            correlation_id=event.correlation_id,
-            trace_id=event.trace_id,
-            payload=PaymentSuccessPayload(
-                payment_id=uuid4(),
-                order_id=event.payload.order_id,
-                user_id=event.payload.user_id,
-                amount=event.payload.amount,
-                currency=event.payload.currency,
-            ),
+        payment_data = await PaymentService.process_payment(
+            order_id=msg["order_id"],
+            user_id=msg["user_id"],
+            amount=msg["amount"]
         )
 
-        await broker.publish(
-            message=payment_event.model_dump(mode="json"),
-            exchange=ecommerce_exchange,
-            routing_key=RoutingKey.PAYMENT_SUCCESS,
-        )
+        async with AsyncSessionLocal() as db:
 
-        payment_success_total.labels(
-            service_name=settings.payment_service_name,
-        ).inc()
+            payment = await PaymentRepository.create(
+                db=db,
+                payment=payment_data
+            )
 
-        rabbitmq_message_published_total.labels(
-            service_name=settings.payment_service_name,
-            routing_key=RoutingKey.PAYMENT_SUCCESS,
-        ).inc()
+            await db.commit()
 
-        logger.info(
-            "Payment success event published",
-            order_id=str(event.payload.order_id),
-            payment_id=str(payment_event.payload.payment_id),
-            routing_key=RoutingKey.PAYMENT_SUCCESS,
-        )
+        # PAYMENT SUCCESS
+        if payment.status == "SUCCESS":
 
-        return
+            event = {
+                "event_id": str(uuid.uuid4()),
+                "event_type": "payment.success",
+                "payment_id": str(payment.id),
+                "order_id": msg["order_id"],
+                "user_id": msg["user_id"],
+                "amount": msg["amount"],
+                "status": payment.status,
+                "created_at": datetime.utcnow().isoformat()
+            }
 
-    payment_event = PaymentFailedEvent(
-        correlation_id=event.correlation_id,
-        trace_id=event.trace_id,
-        payload=PaymentFailedPayload(
-            payment_id=uuid4(),
-            order_id=event.payload.order_id,
-            user_id=event.payload.user_id,
-            amount=event.payload.amount,
-            currency=event.payload.currency,
-            reason="Simulated payment failure",
-        ),
-    )
+            await broker.publish(
+                event,
+                routing_key=RoutingKey.PAYMENT_SUCCESS,
+                exchange=ecommerce_exchange,
+            )
 
-    await broker.publish(
-        message=payment_event.model_dump(mode="json"),
-        exchange=ecommerce_exchange,
-        routing_key=RoutingKey.PAYMENT_FAILED,
-    )
+            print("Published payment.success")
 
-    payment_failed_total.labels(
-        service_name=settings.payment_service_name,
-    ).inc()
+        # PAYMENT FAILED
+        else:
 
-    rabbitmq_message_published_total.labels(
-        service_name=settings.payment_service_name,
-        routing_key=RoutingKey.PAYMENT_FAILED,
-    ).inc()
+            event = {
+                "event_id": str(uuid.uuid4()),
+                "event_type": "payment.failed",
+                "payment_id": str(payment.id),
+                "order_id": msg["order_id"],
+                "user_id": msg["user_id"],
+                "amount": msg["amount"],
+                "status": "FAILED",
+                "created_at": datetime.utcnow().isoformat()
+            }
 
-    logger.warning(
-        "Payment failed event published",
-        order_id=str(event.payload.order_id),
-        payment_id=str(payment_event.payload.payment_id),
-        routing_key=RoutingKey.PAYMENT_FAILED,
-    )
+            await broker.publish(
+                event,
+                routing_key=RoutingKey.PAYMENT_FAILED,
+                exchange=ecommerce_exchange,
+            )
+
+            print("Published payment.failed")
+
+    except Exception as e:
+
+        print("PAYMENT PROCESSING ERROR:", str(e))
 
 
-async def main() -> None:
-    logger.info(
-        "Starting payment consumer service",
-        queue=QueueName.ORDER_CREATED,
-    )
+app = FastStream(broker)
+
+
+async def main():
 
     await broker.start()
 
+    print("Payment consumer started")
+
     try:
         await asyncio.Event().wait()
+
     finally:
         await broker.close()
 

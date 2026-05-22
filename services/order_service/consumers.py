@@ -1,84 +1,86 @@
-import asyncio
+from packages.messaging.broker import (
+    broker,
+    ecommerce_exchange,
+    payment_result_queue,
+)
 
+from .repository import OrderRepository
+from .service import clear_cart
+
+from packages.database.session import AsyncSessionLocal
 from packages.config.settings import settings
-from packages.contracts.events import PaymentFailedEvent, PaymentSuccessEvent
-from packages.contracts.schemas import OrderStatus
-from packages.contracts.topics import QueueName, RoutingKey
-from packages.messaging.broker import broker, ecommerce_exchange, payment_result_queue
-from packages.observability.logging import get_logger, setup_logging
-from packages.observability.metrics import order_cancelled_total, order_confirmed_total
-from packages.observability.tracing import add_span_attributes, setup_tracing
-from services.order_service.state import save_order_status
-
-setup_logging(settings.order_service_name)
-setup_tracing(settings.order_service_name)
-
-logger = get_logger(__name__)
 
 
 @broker.subscriber(
     queue=payment_result_queue,
     exchange=ecommerce_exchange,
 )
-async def handle_payment_result(
-    event: PaymentSuccessEvent | PaymentFailedEvent,
-) -> None:
-    order_id = str(event.payload.order_id)
-
-    add_span_attributes(
-        {
-            "order.id": order_id,
-            "event.type": event.event_type,
-        }
-    )
-
-    if event.event_type == RoutingKey.PAYMENT_SUCCESS:
-        save_order_status(
-            order_id=order_id,
-            status=OrderStatus.CONFIRMED,
-        )
-
-        order_confirmed_total.labels(
-            service_name=settings.order_service_name,
-        ).inc()
-
-        logger.info(
-            "Order confirmed after payment success",
-            order_id=order_id,
-            payment_id=str(event.payload.payment_id),
-        )
-
-        return
-
-    save_order_status(
-        order_id=order_id,
-        status=OrderStatus.CANCELLED,
-    )
-
-    order_cancelled_total.labels(
-        service_name=settings.order_service_name,
-    ).inc()
-
-    logger.warning(
-        "Order cancelled after payment failed",
-        order_id=order_id,
-        payment_id=str(event.payload.payment_id),
-    )
-
-
-async def main() -> None:
-    logger.info(
-        "Starting order payment-result consumer",
-        queue=QueueName.PAYMENT_RESULT,
-    )
-
-    await broker.start()
+async def payment_result(event: dict):
 
     try:
-        await asyncio.Event().wait()
-    finally:
-        await broker.close()
 
+        print("Received event:", event)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+        async with AsyncSessionLocal() as db:
+
+            # PAYMENT SUCCESS
+            if (
+                event["event_type"]
+                == settings.payment_success_routing_key
+            ):
+
+                order = await OrderRepository.update_status(
+                    db,
+                    event["order_id"],
+                    "CONFIRMED"
+                )
+
+                if not order:
+
+                    print(
+                        f"Order {event['order_id']} not found"
+                    )
+
+                    return
+                await db.commit()  # ✅ persist the status change
+
+                await clear_cart(event["user_id"])
+                print(f"Order {event['order_id']} confirmed")
+
+              
+
+            # PAYMENT FAILED
+            elif (
+                event["event_type"]
+                == settings.payment_failed_routing_key
+            ):
+
+                order = await OrderRepository.update_status(
+                    db,
+                    event["order_id"],
+                    "CANCELLED"
+                )
+
+                if not order:
+
+                    print(
+                        f"Order {event['order_id']} not found"
+                    )
+
+                    return
+
+                await db.commit()  # ✅ persist the status change
+                print(f"Order {event['order_id']} cancelled")
+
+            else:
+
+                print(
+                    f"Unknown event type: {event['event_type']}"
+                )
+
+    except Exception as e:
+
+        print(
+            "PAYMENT RESULT CONSUMER ERROR:",
+            str(e)
+        )

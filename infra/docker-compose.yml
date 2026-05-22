@@ -14,7 +14,7 @@ services:
       - ecommerce-net
 
   valkey:
-    image: valkey/valkey:8.1.7
+    image: valkey/valkey:8.1-alpine
     container_name: ecommerce-valkey
     ports:
       - '6379:6379'
@@ -28,7 +28,7 @@ services:
     image: postgres:16
     container_name: ecommerce-postgres-primary
     ports:
-      - '5432:5432'
+      - '15432:5432'
     environment:
       POSTGRES_USER: ecommerce
       POSTGRES_PASSWORD: ecommerce
@@ -42,7 +42,7 @@ services:
     image: postgres:16
     container_name: ecommerce-postgres-replica
     ports:
-      - '5433:5432'
+      - '15433:5432'
     environment:
       POSTGRES_USER: ecommerce
       POSTGRES_PASSWORD: ecommerce

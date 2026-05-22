@@ -28,3 +28,9 @@ cart_restore_queue = RabbitQueue(
     routing_key=RoutingKey.CART_RESTORED,
     durable=True,
 )
+# broker.py — add this
+payment_order_created_queue = RabbitQueue(
+    name=QueueName.ORDER_CREATED,         # "order.created.queue"
+    routing_key=RoutingKey.ORDER_CREATED, # "order.created"
+    durable=True,
+)
