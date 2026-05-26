@@ -1,0 +1,282 @@
+version: '3'
+
+vars:
+  PROJECT_NAME: mini-ecommerce-microservice
+  COMPOSE_FILE: infra/docker-compose.yml
+
+  API_GATEWAY_PORT: 8000
+  PRODUCT_SERVICE_PORT: 8001
+  CART_SERVICE_PORT: 8002
+  ORDER_SERVICE_PORT: 8003
+
+  RABBITMQ_CONTAINER: ecommerce-rabbitmq
+  POSTGRES_CONTAINER: ecommerce-postgres-primary
+
+  POSTGRES_USER: ecommerce
+  PRODUCTS_DB: products_db
+  ORDERS_DB: orders_db
+  PAYMENTS_DB: payments_db
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # -----------------------------
+  # Infra
+  # -----------------------------
+
+  infra:up:
+    desc: Start core Docker infra without WSO2
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} up -d
+
+  infra:up:identity:
+    desc: Start Docker infra including WSO2 identity profile
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} --profile identity up -d
+
+  infra:down:
+    desc: Stop Docker infra
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down
+
+  infra:ps:
+    desc: Show Docker containers
+    cmds:
+      - docker ps
+
+  infra:logs:
+    desc: Follow all Docker compose logs
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f
+
+  rabbitmq:logs:
+    desc: Follow RabbitMQ logs
+    cmds:
+      - docker logs -f {{.RABBITMQ_CONTAINER}}
+
+  rabbitmq:queues:
+    desc: Show RabbitMQ queues and consumers
+    cmds:
+      - docker exec {{.RABBITMQ_CONTAINER}} rabbitmqctl list_queues -p ecommerce name consumers messages_ready messages_unacknowledged
+
+  rabbitmq:vhosts:
+    desc: Show RabbitMQ vhosts
+    cmds:
+      - docker exec {{.RABBITMQ_CONTAINER}} rabbitmqctl list_vhosts
+
+  rabbitmq:setup:
+    desc: Create RabbitMQ ecommerce vhost and permissions
+    cmds:
+      - docker exec {{.RABBITMQ_CONTAINER}} rabbitmqctl add_vhost ecommerce || true
+      - docker exec {{.RABBITMQ_CONTAINER}} rabbitmqctl set_permissions -p ecommerce ecommerce ".*" ".*" ".*"
+      - docker exec {{.RABBITMQ_CONTAINER}} rabbitmqctl list_vhosts
+
+  # -----------------------------
+  # Checks, no duplicate runs
+  # -----------------------------
+
+  ports:
+    desc: Check service ports on Windows
+    cmds:
+      - cmd /c "netstat -ano | findstr :{{.API_GATEWAY_PORT}} || exit /b 0"
+      - cmd /c "netstat -ano | findstr :{{.PRODUCT_SERVICE_PORT}} || exit /b 0"
+      - cmd /c "netstat -ano | findstr :{{.CART_SERVICE_PORT}} || exit /b 0"
+      - cmd /c "netstat -ano | findstr :{{.ORDER_SERVICE_PORT}} || exit /b 0"
+
+  health:
+    desc: Check all HTTP service health endpoints
+    cmds:
+      - curl.exe -s http://localhost:{{.API_GATEWAY_PORT}}/health || true
+      - curl.exe -s http://localhost:{{.PRODUCT_SERVICE_PORT}}/health || true
+      - curl.exe -s http://localhost:{{.CART_SERVICE_PORT}}/health || true
+      - curl.exe -s http://localhost:{{.ORDER_SERVICE_PORT}}/health || true
+
+  status:
+    desc: Check ports, health, containers, queues, and DB connectivity
+    cmds:
+      - task: ports
+      - task: health
+      - task: infra:ps
+      - task: rabbitmq:queues
+      - task: db:check
+
+  # -----------------------------
+  # Run services safely
+  # -----------------------------
+
+  run:gateway:
+    desc: Run API Gateway only if port 8000 is free
+    cmds:
+      - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.API_GATEWAY_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'API Gateway already running on port {{.API_GATEWAY_PORT}}. Not starting duplicate.'; exit 0 }"
+      - uv run uvicorn services.api_gateway.app.main:app --reload --port {{.API_GATEWAY_PORT}}
+
+  run:product:
+    desc: Run Product Service only if port 8001 is free
+    cmds:
+      - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.PRODUCT_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Product Service already running on port {{.PRODUCT_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
+      - uv run uvicorn services.product_service.main:app --reload --port {{.PRODUCT_SERVICE_PORT}}
+
+  run:cart:
+    desc: Run Cart Service only if port 8002 is free
+    cmds:
+      - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.CART_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Cart Service already running on port {{.CART_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
+      - uv run uvicorn services.cart_service.main:app --reload --port {{.CART_SERVICE_PORT}}
+
+  run:order:
+    desc: Run Order Service only if port 8003 is free
+    cmds:
+      - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.ORDER_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Order Service already running on port {{.ORDER_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
+      - uv run uvicorn services.order_service.main:app --reload --port {{.ORDER_SERVICE_PORT}}
+
+  run:payment-consumer:
+    desc: Run Payment consumer, check RabbitMQ queues first
+    cmds:
+      - task: rabbitmq:queues
+      - echo "Check queue consumers above before starting this. Stop if payment consumer already exists."
+      - uv run python -m services.payment_service.consumers
+
+  run:order-consumer:
+    desc: Run Order result consumer, check RabbitMQ queues first
+    cmds:
+      - task: rabbitmq:queues
+      - echo "Check queue consumers above before starting this. Stop if order consumer already exists."
+      - uv run python -m services.order_service.consumers
+
+  # -----------------------------
+  # Tests and quality
+  # -----------------------------
+
+  test:
+    desc: Run all tests
+    cmds:
+      - uv run pytest
+
+  test:q:
+    desc: Run tests quietly
+    cmds:
+      - uv run pytest -q
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - uv run pytest tests/unit
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - uv run pytest tests/integration
+
+  test:smoke:
+    desc: Run smoke tests
+    cmds:
+      - uv run pytest tests/smoke
+
+  lint:
+    desc: Run ruff if installed
+    cmds:
+      - uv run ruff check . || true
+
+  format:
+    desc: Run ruff format if installed
+    cmds:
+      - uv run ruff format . || true
+
+  # -----------------------------
+  # Metrics and observability
+  # -----------------------------
+
+  metrics:
+    desc: Check service metrics endpoints
+    cmds:
+      - curl.exe -s http://localhost:{{.PRODUCT_SERVICE_PORT}}/metrics/ | findstr http_request || true
+      - curl.exe -s http://localhost:{{.CART_SERVICE_PORT}}/metrics/ | findstr http_request || true
+      - curl.exe -s http://localhost:{{.ORDER_SERVICE_PORT}}/metrics/ | findstr http_request || true
+      - curl.exe -s http://localhost:{{.API_GATEWAY_PORT}}/metrics/ | findstr http_request || true
+
+  urls:
+    desc: Print useful local URLs
+    cmds:
+      - echo "API Gateway    http://localhost:8000/docs"
+      - echo "Product API     http://localhost:8001/docs"
+      - echo "Cart API        http://localhost:8002/docs"
+      - echo "Order API       http://localhost:8003/docs"
+      - echo "RabbitMQ        http://localhost:15672"
+      - echo "Jaeger          http://localhost:16686"
+      - echo "Prometheus      http://localhost:9090"
+      - echo "Grafana         http://localhost:3000"
+      - echo "WSO2 Console    https://localhost:9443/console"
+
+  # -----------------------------
+  # PostgreSQL
+  # -----------------------------
+
+  db:check:
+    desc: Check products_db, orders_db, and payments_db connectivity
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PRODUCTS_DB}} -c "SELECT 1;"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.ORDERS_DB}} -c "SELECT 1;"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PAYMENTS_DB}} -c "SELECT 1;"
+
+  db:products:
+    desc: Show recent products
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PRODUCTS_DB}} -c "SELECT * FROM products LIMIT 10;"
+
+  db:orders:
+    desc: Show recent orders
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.ORDERS_DB}} -c "SELECT * FROM orders ORDER BY created_at DESC LIMIT 10;"
+
+  db:payments:
+    desc: Show recent payments
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PAYMENTS_DB}} -c "SELECT * FROM payments ORDER BY created_at DESC LIMIT 10;"
+
+  db:tables:
+    desc: Show tables in all service databases
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PRODUCTS_DB}} -c "\dt"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.ORDERS_DB}} -c "\dt"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PAYMENTS_DB}} -c "\dt"
+
+  # -----------------------------
+  # Smoke checks through running services
+  # -----------------------------
+
+  smoke:gateway:
+    desc: Smoke check gateway routes
+    cmds:
+      - curl.exe -i http://localhost:{{.API_GATEWAY_PORT}}/health
+      - curl.exe -i http://localhost:{{.API_GATEWAY_PORT}}/metrics/
+      - curl.exe -i http://localhost:{{.API_GATEWAY_PORT}}/api/v1/products
+      - curl.exe -i http://localhost:{{.API_GATEWAY_PORT}}/api/v1/cart/user_123
+      - curl.exe -i http://localhost:{{.API_GATEWAY_PORT}}/api/v1/orders
+
+  smoke:services:
+    desc: Smoke check direct service routes
+    cmds:
+      - curl.exe -i http://localhost:{{.PRODUCT_SERVICE_PORT}}/products
+      - curl.exe -i http://localhost:{{.CART_SERVICE_PORT}}/cart/user_123
+      - curl.exe -i http://localhost:{{.ORDER_SERVICE_PORT}}/orders
+
+  # -----------------------------
+  # Cleanup
+  # -----------------------------
+
+  clean:pycache:
+    desc: Remove Python cache folders
+    cmds:
+      - powershell -NoProfile -Command "Get-ChildItem -Path . -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force"
+      - powershell -NoProfile -Command "Get-ChildItem -Path . -Recurse -Directory -Filter .pytest_cache | Remove-Item -Recurse -Force"
+
+  # -----------------------------
+  # Git helpers
+  # -----------------------------
+
+  git:status:
+    desc: Show git status
+    cmds:
+      - git status
