@@ -82,8 +82,10 @@ def _install_cart_fakes(
     monkeypatch.setattr(
         cart_service,
         "get_cart",
-        lambda user_id: existing_cart
-        or CartResponse(user_id=user_id, items=[], total_amount=Decimal("0")),
+        lambda user_id: (
+            existing_cart
+            or CartResponse(user_id=user_id, items=[], total_amount=Decimal("0"))
+        ),
     )
     monkeypatch.setattr(cart_service, "save_cart", saved_carts.append)
 
@@ -183,7 +185,9 @@ def test_add_cart_item_returns_404_when_product_not_found(monkeypatch) -> None:
     assert saved_carts == []
 
 
-def test_add_cart_item_returns_503_when_product_service_unavailable(monkeypatch) -> None:
+def test_add_cart_item_returns_503_when_product_service_unavailable(
+    monkeypatch,
+) -> None:
     _reset_fake_http_client()
     FakeAsyncClient.error = httpx.ConnectError("connection failed")
     saved_carts = _install_cart_fakes(monkeypatch)

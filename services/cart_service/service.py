@@ -62,7 +62,11 @@ async def fetch_product(product_id: UUID) -> ProductResponse:
         raise ProductServiceUnavailableError from exc
 
     product = product_response.data
-    if not product_response.success or product is None or product.product_id != product_id:
+    if (
+        not product_response.success
+        or product is None
+        or product.product_id != product_id
+    ):
         raise ProductServiceUnavailableError
 
     return product
@@ -74,7 +78,11 @@ async def add_item_to_cart(request: AddCartItemRequest) -> CartResponse:
 
     items = list(cart.items)
     existing_item_index = next(
-        (index for index, item in enumerate(items) if item.product_id == request.product_id),
+        (
+            index
+            for index, item in enumerate(items)
+            if item.product_id == request.product_id
+        ),
         None,
     )
 

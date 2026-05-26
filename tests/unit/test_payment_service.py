@@ -21,16 +21,21 @@ def _order_created_event() -> OrderCreatedEvent:
 def test_process_payment_persists_success_before_publishing() -> None:
     event = _order_created_event()
 
-    with patch("services.payment_service.consumers.asyncio.sleep", new=AsyncMock()), patch(
-        "services.payment_service.consumers.random.random",
-        return_value=0,
-    ), patch(
-        "services.payment_service.consumers.save_payment",
-        new=AsyncMock(),
-    ) as save_payment_mock, patch(
-        "services.payment_service.consumers.broker.publish",
-        new=AsyncMock(),
-    ) as publish_mock:
+    with (
+        patch("services.payment_service.consumers.asyncio.sleep", new=AsyncMock()),
+        patch(
+            "services.payment_service.consumers.random.random",
+            return_value=0,
+        ),
+        patch(
+            "services.payment_service.consumers.save_payment",
+            new=AsyncMock(),
+        ) as save_payment_mock,
+        patch(
+            "services.payment_service.consumers.broker.publish",
+            new=AsyncMock(),
+        ) as publish_mock,
+    ):
         asyncio.run(process_payment(event))
 
     save_payment_mock.assert_awaited_once()
@@ -47,19 +52,25 @@ def test_process_payment_persists_success_before_publishing() -> None:
 def test_process_payment_persists_failure_before_publishing() -> None:
     event = _order_created_event()
 
-    with patch("services.payment_service.consumers.asyncio.sleep", new=AsyncMock()), patch(
-        "services.payment_service.consumers.random.random",
-        return_value=1,
-    ), patch(
-        "services.payment_service.consumers.settings.payment_success_rate",
-        0,
-    ), patch(
-        "services.payment_service.consumers.save_payment",
-        new=AsyncMock(),
-    ) as save_payment_mock, patch(
-        "services.payment_service.consumers.broker.publish",
-        new=AsyncMock(),
-    ) as publish_mock:
+    with (
+        patch("services.payment_service.consumers.asyncio.sleep", new=AsyncMock()),
+        patch(
+            "services.payment_service.consumers.random.random",
+            return_value=1,
+        ),
+        patch(
+            "services.payment_service.consumers.settings.payment_success_rate",
+            0,
+        ),
+        patch(
+            "services.payment_service.consumers.save_payment",
+            new=AsyncMock(),
+        ) as save_payment_mock,
+        patch(
+            "services.payment_service.consumers.broker.publish",
+            new=AsyncMock(),
+        ) as publish_mock,
+    ):
         asyncio.run(process_payment(event))
 
     save_payment_mock.assert_awaited_once()

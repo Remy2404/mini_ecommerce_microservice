@@ -1,18 +1,21 @@
 """Application settings."""
+
 from functools import lru_cache
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     """Application settings."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
     )
-    #app settings
+    # app settings
     app_env: str = Field(..., validation_alias="APP_ENV")
     service_version: str = Field(..., validation_alias="SERVICE_VERSION")
     log_level: str = Field(..., validation_alias="LOG_LEVEL")
@@ -26,7 +29,9 @@ class Settings(BaseSettings):
     rabbitmq_url: str = Field(..., validation_alias="RABBITMQ_URL")
     rabbitmq_exchange: str = Field(..., validation_alias="RABBITMQ_EXCHANGE")
     # WSO2 Identity Server settings
-    wso2_base_url: str = Field("https://localhost:9443", validation_alias="WSO2_BASE_URL")
+    wso2_base_url: str = Field(
+        "https://localhost:9443", validation_alias="WSO2_BASE_URL"
+    )
     wso2_issuer: str = Field(
         "https://localhost:9443/oauth2/token",
         validation_alias="WSO2_ISSUER",
@@ -66,14 +71,26 @@ class Settings(BaseSettings):
     valkey_url: str = Field(..., validation_alias="VALKEY_URL")
 
     # open telemetry settings
-    otel_exporter_otlp_endpoint: str = Field(..., validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT")
-    otel_exporter_otlp_protocol: str = Field(..., validation_alias="OTEL_EXPORTER_OTLP_PROTOCOL")
-    otel_exporter_otlp_headers: str = Field("", validation_alias="OTEL_EXPORTER_OTLP_HEADERS")
-    otel_resource_attributes: str = Field(..., validation_alias="OTEL_RESOURCE_ATTRIBUTES")
-    otel_traces_sampler: str = Field("parentbased_always_on", validation_alias="OTEL_TRACES_SAMPLER")
+    otel_exporter_otlp_endpoint: str = Field(
+        ..., validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT"
+    )
+    otel_exporter_otlp_protocol: str = Field(
+        ..., validation_alias="OTEL_EXPORTER_OTLP_PROTOCOL"
+    )
+    otel_exporter_otlp_headers: str = Field(
+        "", validation_alias="OTEL_EXPORTER_OTLP_HEADERS"
+    )
+    otel_resource_attributes: str = Field(
+        ..., validation_alias="OTEL_RESOURCE_ATTRIBUTES"
+    )
+    otel_traces_sampler: str = Field(
+        "parentbased_always_on", validation_alias="OTEL_TRACES_SAMPLER"
+    )
 
     # Service names
-    api_gateway_service_name: str = Field(..., validation_alias="API_GATEWAY_SERVICE_NAME")
+    api_gateway_service_name: str = Field(
+        ..., validation_alias="API_GATEWAY_SERVICE_NAME"
+    )
     product_service_name: str = Field(..., validation_alias="PRODUCT_SERVICE_NAME")
     cart_service_name: str = Field(..., validation_alias="CART_SERVICE_NAME")
     order_service_name: str = Field(..., validation_alias="ORDER_SERVICE_NAME")
@@ -115,11 +132,15 @@ class Settings(BaseSettings):
 
     # jwt settings
     jwt_algorithm: str = Field(..., validation_alias="JWT_ALGORITHM")
-    access_token_expire_minutes: int = Field(..., validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    access_token_expire_minutes: int = Field(
+        ..., validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
     cors_allowed_origins: str = Field(..., validation_alias="CORS_ALLOWED_ORIGINS")
     # Certificate Validation
     tls_enabled: bool = Field(..., validation_alias="TLS_ENABLED")
-    cert_validation_enabled: bool = Field(..., validation_alias="CERT_VALIDATION_ENABLED")
+    cert_validation_enabled: bool = Field(
+        ..., validation_alias="CERT_VALIDATION_ENABLED"
+    )
     ca_cert_path: str = Field(..., validation_alias="CA_CERT_PATH")
     client_cert_path: str = Field(..., validation_alias="CLIENT_CERT_PATH")
     client_key_path: str = Field(..., validation_alias="CLIENT_KEY_PATH")
@@ -130,31 +151,48 @@ class Settings(BaseSettings):
     payment_max_delay_ms: int = Field(..., validation_alias="PAYMENT_MAX_DELAY_MS")
 
     # Caching settings
-    product_cache_ttl_seconds: int = Field(..., validation_alias="PRODUCT_CACHE_TTL_SECONDS")
+    product_cache_ttl_seconds: int = Field(
+        ..., validation_alias="PRODUCT_CACHE_TTL_SECONDS"
+    )
     cart_cache_ttl_seconds: int = Field(..., validation_alias="CART_CACHE_TTL_SECONDS")
     rate_limit_ttl_seconds: int = Field(..., validation_alias="RATE_LIMIT_TTL_SECONDS")
 
     # Rate limiting settings
     rate_limit_enabled: bool = Field(..., validation_alias="RATE_LIMIT_ENABLED")
-    rate_limit_requests_per_minute: int = Field(..., validation_alias="RATE_LIMIT_REQUESTS_PER_MINUTE")
+    rate_limit_requests_per_minute: int = Field(
+        ..., validation_alias="RATE_LIMIT_REQUESTS_PER_MINUTE"
+    )
 
     # RabbitMQ Routing Keys
-    order_created_routing_key: str = Field(..., validation_alias="ORDER_CREATED_ROUTING_KEY")
-    payment_success_routing_key: str = Field(..., validation_alias="PAYMENT_SUCCESS_ROUTING_KEY")
-    payment_failed_routing_key: str = Field(..., validation_alias="PAYMENT_FAILED_ROUTING_KEY")
-    order_confirmed_routing_key: str = Field(..., validation_alias="ORDER_CONFIRMED_ROUTING_KEY")
-    order_cancelled_routing_key: str = Field(..., validation_alias="ORDER_CANCELLED_ROUTING_KEY")
-    cart_restored_routing_key: str = Field(..., validation_alias="CART_RESTORED_ROUTING_KEY")
+    order_created_routing_key: str = Field(
+        ..., validation_alias="ORDER_CREATED_ROUTING_KEY"
+    )
+    payment_success_routing_key: str = Field(
+        ..., validation_alias="PAYMENT_SUCCESS_ROUTING_KEY"
+    )
+    payment_failed_routing_key: str = Field(
+        ..., validation_alias="PAYMENT_FAILED_ROUTING_KEY"
+    )
+    order_confirmed_routing_key: str = Field(
+        ..., validation_alias="ORDER_CONFIRMED_ROUTING_KEY"
+    )
+    order_cancelled_routing_key: str = Field(
+        ..., validation_alias="ORDER_CANCELLED_ROUTING_KEY"
+    )
+    cart_restored_routing_key: str = Field(
+        ..., validation_alias="CART_RESTORED_ROUTING_KEY"
+    )
     # RabbitMQ Queues
     order_created_queue: str = Field(..., validation_alias="ORDER_CREATED_QUEUE")
     payment_result_queue: str = Field(..., validation_alias="PAYMENT_RESULT_QUEUE")
     cart_restore_queue: str = Field(..., validation_alias="CART_RESTORE_QUEUE")
     dead_letter_queue: str = Field(..., validation_alias="DEAD_LETTER_QUEUE")
+
     @property
     def cors_origins(self) -> list[str]:
         return [
             origin.strip()
-            for origin in self.cors_allowed_origins.split(',')
+            for origin in self.cors_allowed_origins.split(",")
             if origin.strip()
         ]
 
@@ -167,5 +205,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
 
 settings = get_settings()

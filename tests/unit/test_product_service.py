@@ -129,7 +129,7 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
     with TestClient(app) as client:
         # Generate some traffic first
         client.get("/health")
-        
+
         response = client.get("/metrics")
 
     assert response.status_code == 200

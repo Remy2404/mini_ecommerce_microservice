@@ -36,4 +36,5 @@ async def shutdown() -> None:
 
     logger.info("RabbitMQ broker disconnected")
 
+
 app.include_router(order_router)

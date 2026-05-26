@@ -7,4 +7,3 @@ def test_order_created_metric_can_increment():
     final_val = order_created_total.labels(service_name="test-service")._value.get()
 
     assert final_val == initial_val + 1.0
-

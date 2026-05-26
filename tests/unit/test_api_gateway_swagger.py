@@ -241,4 +241,7 @@ def test_explicit_post_routes_forward_raw_body_and_headers(
     assert call["content"] == payload
     assert forwarded_headers["authorization"] == "Bearer test-token"
     assert forwarded_headers["x-request-id"] == "request-123"
-    assert forwarded_headers["traceparent"] == "00-00000000000000000000000000000000-0000000000000000-01"
+    assert (
+        forwarded_headers["traceparent"]
+        == "00-00000000000000000000000000000000-0000000000000000-01"
+    )

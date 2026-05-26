@@ -1,4 +1,6 @@
 from enum import StrEnum
+
+
 class ExchangeName(StrEnum):
     ECOMMERCE = "ecommerce.exchange"
 
