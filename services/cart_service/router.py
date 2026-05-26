@@ -2,14 +2,14 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 from packages.config.settings import settings
 from packages.contracts.schemas import ApiResponse
 from packages.observability.logging import get_logger
 from packages.observability.tracing import add_span_attributes
+from services.cart_service import service as cart_service
 from services.cart_service.schemas import AddCartItemRequest, CartResponse
-from services.cart_service import main as cart_main
 
 router = APIRouter()
 
@@ -33,7 +33,23 @@ async def health() -> dict[str, str]:
 async def add_cart_item(
 	request: AddCartItemRequest,
 ) -> ApiResponse[CartResponse]:
-	cart = cart_main.add_item_to_cart(request)
+	try:
+		cart = await cart_service.add_item_to_cart(request)
+	except cart_service.ProductNotFoundError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="Product not found",
+		) from exc
+	except cart_service.ProductLookupRejectedError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Product lookup rejected",
+		) from exc
+	except cart_service.ProductServiceUnavailableError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+			detail="Product service unavailable",
+		) from exc
 
 	add_span_attributes(
 		{
@@ -59,7 +75,7 @@ async def add_cart_item(
 
 @router.get("/cart/{user_id}")
 async def get_cart_endpoint(user_id: str) -> ApiResponse[CartResponse]:
-	cart = cart_main.find_cart(user_id)
+	cart = cart_service.find_cart(user_id)
 
 	logger.info(
 		"Cart fetched",
@@ -79,7 +95,7 @@ async def remove_cart_item_endpoint(
 	user_id: str,
 	product_id: UUID,
 ) -> ApiResponse[CartResponse]:
-	cart = cart_main.delete_cart_item(
+	cart = cart_service.delete_cart_item(
 		user_id=user_id,
 		product_id=product_id,
 	)
@@ -99,7 +115,7 @@ async def remove_cart_item_endpoint(
 
 @router.delete("/cart/{user_id}")
 async def clear_cart_endpoint(user_id: str) -> ApiResponse[dict[str, str]]:
-	cart_main.delete_cart(user_id)
+	cart_service.delete_cart(user_id)
 
 	logger.info(
 		"Cart cleared",

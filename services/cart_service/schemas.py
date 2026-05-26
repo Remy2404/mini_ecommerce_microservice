@@ -1,15 +1,15 @@
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AddCartItemRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     user_id: str = Field(min_length=1)
     product_id: UUID
-    name: str = Field(min_length=1, max_length=255)
     quantity: int = Field(gt=0)
-    unit_price: Decimal = Field(ge=0)
 
 
 class CartItemResponse(BaseModel):
