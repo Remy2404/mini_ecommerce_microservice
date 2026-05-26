@@ -1,9 +1,26 @@
 ## Run docker : `docker compose -f infra/docker-compose.yml up -d`
 ## Cancel docker : `docker compose -f infra/docker-compose.yml down`
+
+## Run local services with scripts
+```bash
+bash scripts/run_product_service.sh
+bash scripts/run_cart_service.sh
+bash scripts/run_order_service.sh
+bash scripts/run_payment_service.sh
+bash scripts/run_api_gateway.sh
+```
+
+Run every local service in one shell:
+```bash
+bash scripts/run_all_local.sh
+```
+
+## Run local services directly
 uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
 uv run uvicorn services.product_service.main:app --reload --port 8001
 uv run uvicorn services.cart_service.main:app --reload --port 8002
 uv run uvicorn services.order_service.main:app --reload --port 8003
+uv run python -m services.payment_service.consumers
 
 
 curl.exe -i http://127.0.0.1:8000/health
@@ -67,8 +84,8 @@ Use `WSO2_VERIFY_SSL=false` only for the default local self-signed WSO2 certific
 | Phase 2: Core services              |                  ✅ Done | Product, Cart, Order, Payment services exist and run                  |
 | Phase 3: Basic Saga flow            |                  ✅ Done | Product → Cart → Order → Payment → CONFIRMED/CANCELLED works          |
 | Phase 4: Metrics + monitoring       |          ✅ done | `/metrics` and Prometheus scrape setup                                |
-| Phase 5: API Gateway hardening      |              🟡 Partial | Gateway exists, but needs route completion, security, logging, tests  |
-| Phase 6: Security/auth              | 🔴 Not production-ready | WSO2/JWT, IDOR protection, service-to-service trust not complete      |
+| Phase 5: API Gateway hardening      |              ✅ done | Gateway exists, but needs route completion, security, logging, tests  |
+| Phase 6: Security/auth              | ✅done but Not production-ready | WSO2/JWT, IDOR protection, service-to-service trust not complete      |
 | Phase 7: PostgreSQL persistence     |             🔴 Not done | Valkey is still acting like main DB                                   |
 | Phase 8: Reliability                |             🔴 Not done | retry, DLQ, idempotency, duplicate event handling                     |
 | Phase 9: Transaction safety         |             🔴 Not done | outbox pattern, consistency between DB and RabbitMQ                   |

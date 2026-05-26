@@ -9,7 +9,7 @@ from packages.contracts.schemas import ApiResponse
 from packages.observability.logging import get_logger
 from packages.observability.tracing import add_span_attributes
 from services.product_service.schemas import CreateProductRequest, ProductResponse
-from services.product_service import main as product_main
+from services.product_service.service import create_product, find_product, find_products
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ async def health() -> dict[str, str]:
 async def create_product_endpoint(
 	request: CreateProductRequest,
 ) -> ApiResponse[ProductResponse]:
-	product = product_main.create_product(request)
+	product = create_product(request)
 
 	add_span_attributes(
 		{
@@ -57,7 +57,7 @@ async def create_product_endpoint(
 
 @router.get("/products")
 async def list_products_endpoint() -> ApiResponse[list[ProductResponse]]:
-	products = product_main.find_products()
+	products = find_products()
 
 	logger.info(
 		"Products fetched",
@@ -75,7 +75,7 @@ async def list_products_endpoint() -> ApiResponse[list[ProductResponse]]:
 async def get_product_endpoint(
 	product_id: UUID,
 ) -> ApiResponse[ProductResponse]:
-	product = product_main.find_product(product_id)
+	product = find_product(product_id)
 
 	if product is None:
 		raise HTTPException(

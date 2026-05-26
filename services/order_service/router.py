@@ -8,6 +8,7 @@ from packages.config.settings import settings
 from packages.contracts.events import OrderCreatedEvent, OrderCreatedPayload
 from packages.contracts.schemas import ApiResponse, OrderStatus
 from packages.contracts.topics import RoutingKey
+from packages.messaging.broker import broker, ecommerce_exchange
 from packages.observability.logging import get_logger
 from packages.observability.metrics import (
 	order_created_total,
@@ -17,9 +18,10 @@ from packages.observability.tracing import add_span_attributes
 from services.order_service.cart_reader import (
 	CartNotFoundError,
 	EmptyCartError,
+	get_cart_total_amount,
 )
 from services.order_service.schemas import CreateOrderRequest
-from services.order_service import main as order_main
+from services.order_service.state import get_all_orders, get_order_status, save_order_status
 
 router = APIRouter()
 
@@ -46,7 +48,7 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 	cart_id = f"cart_{user_id}"
 
 	try:
-		amount = order_main.get_cart_total_amount(user_id)
+		amount = get_cart_total_amount(user_id)
 	except CartNotFoundError:
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,9 +77,9 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 		}
 	)
 
-	await order_main.broker.publish(
+	await broker.publish(
 		message=event.model_dump(mode="json"),
-		exchange=order_main.ecommerce_exchange,
+		exchange=ecommerce_exchange,
 		routing_key=RoutingKey.ORDER_CREATED,
 	)
 
@@ -90,7 +92,7 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 		routing_key=RoutingKey.ORDER_CREATED,
 	).inc()
 
-	order_main.save_order_status(
+	save_order_status(
 		order_id=str(order_id),
 		status=OrderStatus.PENDING,
 	)
@@ -114,7 +116,7 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 
 @router.get("/orders/{order_id}")
 async def get_order(order_id: str) -> ApiResponse[dict[str, str]]:
-	order_status = order_main.get_order_status(order_id)
+	order_status = get_order_status(order_id)
 
 	if order_status is None:
 		raise HTTPException(
@@ -137,5 +139,5 @@ async def list_orders() -> ApiResponse[dict[str, str]]:
 	return ApiResponse[dict[str, str]](
 		success=True,
 		message="Orders fetched successfully",
-		data=order_main.get_all_orders(),
+		data=get_all_orders(),
 	)

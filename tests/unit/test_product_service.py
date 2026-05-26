@@ -28,7 +28,7 @@ def test_create_product_endpoint_success() -> None:
     )
 
     with patch(
-        "services.product_service.main.create_product",
+        "services.product_service.router.create_product",
         return_value=mock_product,
     ):
         with TestClient(app) as client:
@@ -72,7 +72,7 @@ def test_list_products_endpoint_success() -> None:
     ]
 
     with patch(
-        "services.product_service.main.find_products",
+        "services.product_service.router.find_products",
         return_value=mock_products,
     ):
         with TestClient(app) as client:
@@ -97,7 +97,7 @@ def test_get_product_endpoint_success() -> None:
     )
 
     with patch(
-        "services.product_service.main.find_product",
+        "services.product_service.router.find_product",
         return_value=mock_product,
     ):
         with TestClient(app) as client:
@@ -114,7 +114,7 @@ def test_get_product_endpoint_not_found() -> None:
     product_id = uuid4()
 
     with patch(
-        "services.product_service.main.find_product",
+        "services.product_service.router.find_product",
         return_value=None,
     ):
         with TestClient(app) as client:

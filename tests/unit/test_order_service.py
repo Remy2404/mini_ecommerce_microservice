@@ -24,13 +24,13 @@ def test_create_order_endpoint_returns_created_order() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.main.broker.publish",
+        "services.order_service.router.broker.publish",
         new=AsyncMock(),
     ) as publish_mock, patch(
-        "services.order_service.main.get_cart_total_amount",
+        "services.order_service.router.get_cart_total_amount",
         return_value=Decimal("150.00"),
     ), patch(
-        "services.order_service.main.save_order_status",
+        "services.order_service.router.save_order_status",
     ):
         with TestClient(app) as client:
             response = client.post("/orders", json={"user_id": "user_123"})
@@ -85,7 +85,7 @@ def test_create_order_cart_not_found() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.main.get_cart_total_amount",
+        "services.order_service.router.get_cart_total_amount",
         side_effect=CartNotFoundError("Cart not found"),
     ):
         with TestClient(app) as client:
@@ -102,7 +102,7 @@ def test_create_order_cart_empty() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.main.get_cart_total_amount",
+        "services.order_service.router.get_cart_total_amount",
         side_effect=EmptyCartError("Cart is empty"),
     ):
         with TestClient(app) as client:
@@ -118,7 +118,7 @@ def test_get_order_success() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.main.get_order_status",
+        "services.order_service.router.get_order_status",
         return_value="PENDING",
     ):
         with TestClient(app) as client:
@@ -136,7 +136,7 @@ def test_get_order_not_found() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.main.get_order_status",
+        "services.order_service.router.get_order_status",
         return_value=None,
     ):
         with TestClient(app) as client:
@@ -152,7 +152,7 @@ def test_list_orders() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.main.get_all_orders",
+        "services.order_service.router.get_all_orders",
         return_value={"order_123": "PENDING", "order_456": "CONFIRMED"},
     ):
         with TestClient(app) as client:
