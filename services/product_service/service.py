@@ -4,7 +4,7 @@ from services.product_service.repository import get_product, list_products, save
 from services.product_service.schemas import CreateProductRequest, ProductResponse
 
 
-def create_product(request: CreateProductRequest) -> ProductResponse:
+async def create_product(request: CreateProductRequest) -> ProductResponse:
     product = ProductResponse(
         product_id=uuid4(),
         name=request.name,
@@ -14,14 +14,14 @@ def create_product(request: CreateProductRequest) -> ProductResponse:
         category=request.category,
     )
 
-    save_product(product)
+    await save_product(product)
 
     return product
 
 
-def find_product(product_id: UUID) -> ProductResponse | None:
-    return get_product(product_id)
+async def find_product(product_id: UUID) -> ProductResponse | None:
+    return await get_product(product_id)
 
 
-def find_products() -> list[ProductResponse]:
-    return list_products()
+async def find_products() -> list[ProductResponse]:
+    return await list_products()

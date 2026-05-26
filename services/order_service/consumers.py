@@ -34,7 +34,7 @@ async def handle_payment_result(
     )
 
     if event.event_type == RoutingKey.PAYMENT_SUCCESS:
-        save_order_status(
+        await save_order_status(
             order_id=order_id,
             status=OrderStatus.CONFIRMED,
         )
@@ -68,7 +68,7 @@ async def handle_payment_result(
 
         return
 
-    save_order_status(
+    await save_order_status(
         order_id=order_id,
         status=OrderStatus.CANCELLED,
     )

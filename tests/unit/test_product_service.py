@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -29,7 +29,7 @@ def test_create_product_endpoint_success() -> None:
 
     with patch(
         "services.product_service.router.create_product",
-        return_value=mock_product,
+        new=AsyncMock(return_value=mock_product),
     ):
         with TestClient(app) as client:
             response = client.post(
@@ -73,7 +73,7 @@ def test_list_products_endpoint_success() -> None:
 
     with patch(
         "services.product_service.router.find_products",
-        return_value=mock_products,
+        new=AsyncMock(return_value=mock_products),
     ):
         with TestClient(app) as client:
             response = client.get("/products")
@@ -98,7 +98,7 @@ def test_get_product_endpoint_success() -> None:
 
     with patch(
         "services.product_service.router.find_product",
-        return_value=mock_product,
+        new=AsyncMock(return_value=mock_product),
     ):
         with TestClient(app) as client:
             response = client.get(f"/products/{product_id}")
@@ -115,7 +115,7 @@ def test_get_product_endpoint_not_found() -> None:
 
     with patch(
         "services.product_service.router.find_product",
-        return_value=None,
+        new=AsyncMock(return_value=None),
     ):
         with TestClient(app) as client:
             response = client.get(f"/products/{product_id}")
@@ -134,4 +134,3 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
 
     assert response.status_code == 200
     assert "http_request_total" in response.text
-

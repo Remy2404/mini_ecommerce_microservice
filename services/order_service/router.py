@@ -18,8 +18,9 @@ from packages.observability.tracing import add_span_attributes
 from services.order_service.cart_reader import (
 	CartNotFoundError,
 	EmptyCartError,
-	get_cart_total_amount,
+	get_cart_snapshot,
 )
+from services.order_service.repository import save_order
 from services.order_service.schemas import CreateOrderRequest
 from services.order_service.state import get_all_orders, get_order_status, save_order_status
 
@@ -48,7 +49,7 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 	cart_id = f"cart_{user_id}"
 
 	try:
-		amount = get_cart_total_amount(user_id)
+		cart = get_cart_snapshot(user_id)
 	except CartNotFoundError:
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
@@ -65,8 +66,19 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 			order_id=order_id,
 			user_id=user_id,
 			cart_id=cart_id,
-			amount=amount,
+			amount=cart.total_amount,
 		)
+	)
+
+	await save_order(
+		order_id=order_id,
+		user_id=user_id,
+		cart_id=cart_id,
+		status=OrderStatus.PENDING,
+		total_amount=cart.total_amount,
+		currency=event.payload.currency,
+		correlation_id=event.correlation_id,
+		items=cart.items,
 	)
 
 	add_span_attributes(
@@ -92,7 +104,7 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 		routing_key=RoutingKey.ORDER_CREATED,
 	).inc()
 
-	save_order_status(
+	await save_order_status(
 		order_id=str(order_id),
 		status=OrderStatus.PENDING,
 	)
@@ -116,7 +128,7 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 
 @router.get("/orders/{order_id}")
 async def get_order(order_id: str) -> ApiResponse[dict[str, str]]:
-	order_status = get_order_status(order_id)
+	order_status = await get_order_status(order_id)
 
 	if order_status is None:
 		raise HTTPException(
@@ -139,5 +151,5 @@ async def list_orders() -> ApiResponse[dict[str, str]]:
 	return ApiResponse[dict[str, str]](
 		success=True,
 		message="Orders fetched successfully",
-		data=get_all_orders(),
+		data=await get_all_orders(),
 	)

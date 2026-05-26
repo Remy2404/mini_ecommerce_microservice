@@ -1,4 +1,6 @@
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -19,7 +21,8 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_create_order_endpoint_returns_created_order() -> None:
-    from decimal import Decimal
+    from services.order_service.cart_reader import CartSnapshot
+
     with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
         "services.order_service.main.broker.close",
         new=AsyncMock(),
@@ -27,11 +30,19 @@ def test_create_order_endpoint_returns_created_order() -> None:
         "services.order_service.router.broker.publish",
         new=AsyncMock(),
     ) as publish_mock, patch(
-        "services.order_service.router.get_cart_total_amount",
-        return_value=Decimal("150.00"),
+        "services.order_service.router.get_cart_snapshot",
+        return_value=CartSnapshot(
+            cart_id="cart_user_123",
+            total_amount=Decimal("150.00"),
+            items=[],
+        ),
     ), patch(
         "services.order_service.router.save_order_status",
-    ):
+        new=AsyncMock(),
+    ), patch(
+        "services.order_service.router.save_order",
+        new=AsyncMock(),
+    ) as save_order_mock:
         with TestClient(app) as client:
             response = client.post("/orders", json={"user_id": "user_123"})
 
@@ -43,17 +54,16 @@ def test_create_order_endpoint_returns_created_order() -> None:
     assert body["data"]["order_id"]
     assert body["data"]["status"] == "PENDING"
     publish_mock.assert_awaited_once()
+    save_order_mock.assert_awaited_once()
 
 
-@patch("services.order_service.consumers.save_order_status")
+@patch("services.order_service.consumers.save_order_status", new_callable=AsyncMock)
 @patch("services.order_service.consumers.get_valkey_client")
 @patch("services.order_service.consumers.setup_logging")
 @patch("services.order_service.consumers.setup_tracing")
 def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_save_status
 ) -> None:
-    from decimal import Decimal
-    from uuid import uuid4
     from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
     from services.order_service.consumers import handle_payment_result
     import asyncio
@@ -72,7 +82,7 @@ def test_handle_payment_success_clears_cart(
     # Run the async consumer function in the event loop
     asyncio.run(handle_payment_result(event))
 
-    mock_save_status.assert_called_once_with(
+    mock_save_status.assert_awaited_once_with(
         order_id=str(event.payload.order_id),
         status="CONFIRMED",
     )
@@ -85,7 +95,7 @@ def test_create_order_cart_not_found() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.router.get_cart_total_amount",
+        "services.order_service.router.get_cart_snapshot",
         side_effect=CartNotFoundError("Cart not found"),
     ):
         with TestClient(app) as client:
@@ -102,7 +112,7 @@ def test_create_order_cart_empty() -> None:
         "services.order_service.main.broker.close",
         new=AsyncMock(),
     ), patch(
-        "services.order_service.router.get_cart_total_amount",
+        "services.order_service.router.get_cart_snapshot",
         side_effect=EmptyCartError("Cart is empty"),
     ):
         with TestClient(app) as client:
@@ -119,7 +129,7 @@ def test_get_order_success() -> None:
         new=AsyncMock(),
     ), patch(
         "services.order_service.router.get_order_status",
-        return_value="PENDING",
+        new=AsyncMock(return_value="PENDING"),
     ):
         with TestClient(app) as client:
             response = client.get("/orders/order_123")
@@ -137,7 +147,7 @@ def test_get_order_not_found() -> None:
         new=AsyncMock(),
     ), patch(
         "services.order_service.router.get_order_status",
-        return_value=None,
+        new=AsyncMock(return_value=None),
     ):
         with TestClient(app) as client:
             response = client.get("/orders/order_123")
@@ -153,7 +163,7 @@ def test_list_orders() -> None:
         new=AsyncMock(),
     ), patch(
         "services.order_service.router.get_all_orders",
-        return_value={"order_123": "PENDING", "order_456": "CONFIRMED"},
+        new=AsyncMock(return_value={"order_123": "PENDING", "order_456": "CONFIRMED"}),
     ):
         with TestClient(app) as client:
             response = client.get("/orders")

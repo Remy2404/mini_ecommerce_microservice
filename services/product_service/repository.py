@@ -1,65 +1,108 @@
-import json
-from decimal import Decimal
 from uuid import UUID
 
-from packages.cache.valkey_client import get_valkey_client
-from services.product_service.schemas import ProductResponse
+from sqlalchemy import text
 
 from packages.config.settings import settings
-
-PRODUCT_KEY_PREFIX = "product"
-PRODUCT_INDEX_KEY = "products:index"
-
-
-def _product_key(product_id: str) -> str:
-    return f"{PRODUCT_KEY_PREFIX}:{product_id}"
+from packages.database.session import connect, transaction
+from services.product_service.schemas import ProductResponse
 
 
-def save_product(product: ProductResponse) -> None:
-    client = get_valkey_client()
+PRODUCT_COLUMNS = """
+    id,
+    name,
+    description,
+    price,
+    stock_quantity,
+    category
+"""
 
-    payload = product.model_dump(mode="json")
-    payload["price"] = str(product.price)
 
-    client.set(
-        _product_key(str(product.product_id)),
-        json.dumps(payload),
-        ex=settings.product_cache_ttl_seconds,
+def _product_from_row(row) -> ProductResponse:
+    data = row._mapping
+    return ProductResponse(
+        product_id=data["id"],
+        name=data["name"],
+        description=data["description"],
+        price=data["price"],
+        stock_quantity=data["stock_quantity"],
+        category=data["category"],
     )
 
-    client.sadd(
-        PRODUCT_INDEX_KEY,
-        str(product.product_id),
-    )
+
+async def save_product(product: ProductResponse) -> None:
+    async with transaction(settings.products_database_url) as connection:
+        await connection.execute(
+            text(
+                """
+                INSERT INTO products (
+                    id,
+                    name,
+                    description,
+                    price,
+                    stock_quantity,
+                    category
+                )
+                VALUES (
+                    :id,
+                    :name,
+                    :description,
+                    :price,
+                    :stock_quantity,
+                    :category
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    price = EXCLUDED.price,
+                    stock_quantity = EXCLUDED.stock_quantity,
+                    category = EXCLUDED.category,
+                    updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {
+                "id": product.product_id,
+                "name": product.name,
+                "description": product.description,
+                "price": product.price,
+                "stock_quantity": product.stock_quantity,
+                "category": product.category,
+            },
+        )
 
 
-def get_product(product_id: UUID) -> ProductResponse | None:
-    client = get_valkey_client()
+async def get_product(product_id: UUID) -> ProductResponse | None:
+    async with connect(settings.products_database_url) as connection:
+        result = await connection.execute(
+            text(
+                f"""
+                SELECT {PRODUCT_COLUMNS}
+                FROM products
+                WHERE id = :product_id
+                  AND is_active = TRUE
+                """
+            ),
+            {"product_id": product_id},
+        )
+        row = result.first()
 
-    raw_product = client.get(
-        _product_key(str(product_id)),
-    )
-
-    if raw_product is None:
+    if row is None:
         return None
 
-    data = json.loads(str(raw_product))
-    data["price"] = Decimal(data["price"])
-
-    return ProductResponse(**data)
+    return _product_from_row(row)
 
 
-def list_products() -> list[ProductResponse]:
-    client = get_valkey_client()
+async def list_products() -> list[ProductResponse]:
+    async with connect(settings.products_database_url) as connection:
+        result = await connection.execute(
+            text(
+                f"""
+                SELECT {PRODUCT_COLUMNS}
+                FROM products
+                WHERE is_active = TRUE
+                ORDER BY created_at DESC, id DESC
+                """
+            )
+        )
+        rows = result.all()
 
-    product_ids = client.smembers(PRODUCT_INDEX_KEY)
-
-    products: list[ProductResponse] = []
-
-    for product_id in product_ids:
-        product = get_product(UUID(str(product_id)))
-
-        if product is not None:
-            products.append(product)
-
-    return products
+    return [_product_from_row(row) for row in rows]

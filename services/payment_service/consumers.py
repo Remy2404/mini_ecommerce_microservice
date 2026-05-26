@@ -20,6 +20,7 @@ from packages.observability.metrics import (
     rabbitmq_message_published_total,
 )
 from packages.observability.tracing import add_span_attributes, setup_tracing
+from services.payment_service.repository import save_payment
 
 setup_logging(settings.payment_service_name)
 setup_tracing(settings.payment_service_name)
@@ -62,16 +63,28 @@ async def process_payment(event: OrderCreatedEvent) -> None:
     )
 
     if is_success:
+        payment_id = uuid4()
         payment_event = PaymentSuccessEvent(
             correlation_id=event.correlation_id,
             trace_id=event.trace_id,
             payload=PaymentSuccessPayload(
-                payment_id=uuid4(),
+                payment_id=payment_id,
                 order_id=event.payload.order_id,
                 user_id=event.payload.user_id,
                 amount=event.payload.amount,
                 currency=event.payload.currency,
             ),
+        )
+
+        await save_payment(
+            payment_id=payment_id,
+            order_id=event.payload.order_id,
+            user_id=event.payload.user_id,
+            status=payment_event.payload.status,
+            amount=event.payload.amount,
+            currency=event.payload.currency,
+            failure_reason=None,
+            correlation_id=event.correlation_id,
         )
 
         await broker.publish(
@@ -98,17 +111,29 @@ async def process_payment(event: OrderCreatedEvent) -> None:
 
         return
 
+    payment_id = uuid4()
     payment_event = PaymentFailedEvent(
         correlation_id=event.correlation_id,
         trace_id=event.trace_id,
         payload=PaymentFailedPayload(
-            payment_id=uuid4(),
+            payment_id=payment_id,
             order_id=event.payload.order_id,
             user_id=event.payload.user_id,
             amount=event.payload.amount,
             currency=event.payload.currency,
             reason="Simulated payment failure",
         ),
+    )
+
+    await save_payment(
+        payment_id=payment_id,
+        order_id=event.payload.order_id,
+        user_id=event.payload.user_id,
+        status=payment_event.payload.status,
+        amount=event.payload.amount,
+        currency=event.payload.currency,
+        failure_reason=payment_event.payload.reason,
+        correlation_id=event.correlation_id,
     )
 
     await broker.publish(

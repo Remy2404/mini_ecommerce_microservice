@@ -33,7 +33,7 @@ async def health() -> dict[str, str]:
 async def create_product_endpoint(
 	request: CreateProductRequest,
 ) -> ApiResponse[ProductResponse]:
-	product = create_product(request)
+	product = await create_product(request)
 
 	add_span_attributes(
 		{
@@ -57,7 +57,7 @@ async def create_product_endpoint(
 
 @router.get("/products")
 async def list_products_endpoint() -> ApiResponse[list[ProductResponse]]:
-	products = find_products()
+	products = await find_products()
 
 	logger.info(
 		"Products fetched",
@@ -75,7 +75,7 @@ async def list_products_endpoint() -> ApiResponse[list[ProductResponse]]:
 async def get_product_endpoint(
 	product_id: UUID,
 ) -> ApiResponse[ProductResponse]:
-	product = find_product(product_id)
+	product = await find_product(product_id)
 
 	if product is None:
 		raise HTTPException(
