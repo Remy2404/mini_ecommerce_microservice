@@ -21,6 +21,7 @@ uv run uvicorn services.product_service.main:app --reload --port 8001
 uv run uvicorn services.cart_service.main:app --reload --port 8002
 uv run uvicorn services.order_service.main:app --reload --port 8003
 uv run python -m services.payment_service.consumers
+uv run python -m services.order_service.consumers
 
 
 curl.exe -i http://127.0.0.1:8000/health

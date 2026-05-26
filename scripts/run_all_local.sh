@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
 pids=()
 
@@ -21,11 +22,21 @@ start_service() {
   pids+=("$!")
 }
 
+start_command() {
+  local name="$1"
+  shift
+
+  echo "Starting ${name}..."
+  (cd "${ROOT_DIR}" && "$@") &
+  pids+=("$!")
+}
+
 trap cleanup EXIT INT TERM
 
 start_service "product service" "run_product_service.sh"
 start_service "cart service" "run_cart_service.sh"
 start_service "order service" "run_order_service.sh"
+start_command "order consumer" uv run python -m services.order_service.consumers
 start_service "payment service" "run_payment_service.sh"
 start_service "api gateway" "run_api_gateway.sh"
 
