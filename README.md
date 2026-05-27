@@ -16,12 +16,12 @@ bash scripts/run_all_local.sh
 ```
 
 ## Run local services directly
-uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
-uv run uvicorn services.product_service.main:app --reload --port 8001
-uv run uvicorn services.cart_service.main:app --reload --port 8002
-uv run uvicorn services.order_service.main:app --reload --port 8003
-uv run python -m services.payment_service.consumers
-uv run python -m services.order_service.consumers
+uv run uvicorn apps.api_gateway.app.main:app --reload --port 8000
+uv run uvicorn apps.product_service.app.main:app --reload --port 8001
+uv run uvicorn apps.cart_service.app.main:app --reload --port 8002
+uv run uvicorn apps.order_service.app.main:app --reload --port 8003
+uv run python -m apps.payment_service.workers.payment_worker
+uv run python -m apps.order_service.workers.payment_result_worker
 
 
 curl.exe -i http://127.0.0.1:8000/health
@@ -31,7 +31,7 @@ curl.exe -i http://127.0.0.1:8000/api/v1/cart/user_123
 curl.exe -i http://127.0.0.1:8000/api/v1/orders
 
 ## Run test : `uv run pytest tests`
-## Run test with coverage : `uv run pytest --cov=services tests`
+## Run test with coverage : `uv run pytest --cov=apps tests`
 
 ## API Gateway auth
 
@@ -41,7 +41,7 @@ Local development can run without WSO2 token validation:
 
 ```powershell
 $env:GATEWAY_AUTH_ENABLED = "false"
-uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
+uv run uvicorn apps.api_gateway.app.main:app --reload --port 8000
 curl.exe http://localhost:8000/health
 ```
 
@@ -58,7 +58,7 @@ $env:WSO2_JWKS_URL = "https://localhost:9443/oauth2/jwks"
 $env:WSO2_INTROSPECTION_URL = "https://localhost:9443/oauth2/introspect"
 $env:WSO2_VERIFY_SSL = "false"
 $env:WSO2_REQUEST_TIMEOUT_SECONDS = "10"
-uv run uvicorn services.api_gateway.app.main:app --reload --port 8000
+uv run uvicorn apps.api_gateway.app.main:app --reload --port 8000
 ```
 
 Protected gateway routes require the access token from `/auth/login`:
@@ -77,7 +77,7 @@ curl.exe -i -X POST http://localhost:8000/auth/login `
   -d "{\"username\":\"admin\",\"password\":\"admin\",\"scope\":\"openid profile email\"}"
 ```
 
-Use `WSO2_VERIFY_SSL=false` only for the default local self-signed WSO2 certificate. Production should run with `GATEWAY_AUTH_ENABLED=true` and `WSO2_VERIFY_SSL=true`. See [docs/wso2-local-setup.md](docs/wso2-local-setup.md) for setup steps.
+Use `WSO2_VERIFY_SSL=false` only for the default local self-signed WSO2 certificate. Production should run with `GATEWAY_AUTH_ENABLED=true` and `WSO2_VERIFY_SSL=true`. See [docs/security/wso2-local-setup.md](docs/security/wso2-local-setup.md) for setup steps.
 
 | Phase                               |                  Status | Meaning                                                               |
 | ----------------------------------- | ----------------------: | --------------------------------------------------------------------- |

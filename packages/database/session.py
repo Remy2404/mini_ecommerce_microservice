@@ -2,17 +2,9 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from functools import lru_cache
 
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
-
-
-@lru_cache
-def get_async_engine(database_url: str) -> AsyncEngine:
-    return create_async_engine(
-        database_url,
-        pool_pre_ping=True,
-    )
+from packages.database.engine import get_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 
 @asynccontextmanager

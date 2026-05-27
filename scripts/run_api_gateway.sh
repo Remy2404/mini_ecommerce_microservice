@@ -8,4 +8,4 @@ cd "${ROOT_DIR}"
 HOST="${HOST:-127.0.0.1}"
 PORT="${API_GATEWAY_PORT:-8000}"
 
-exec uv run uvicorn services.api_gateway.app.main:app --reload --host "${HOST}" --port "${PORT}"
+exec uv run uvicorn apps.api_gateway.app.main:app --reload --host "${HOST}" --port "${PORT}"

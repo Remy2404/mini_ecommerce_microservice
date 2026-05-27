@@ -36,7 +36,7 @@ trap cleanup EXIT INT TERM
 start_service "product service" "run_product_service.sh"
 start_service "cart service" "run_cart_service.sh"
 start_service "order service" "run_order_service.sh"
-start_command "order consumer" uv run python -m services.order_service.consumers
+start_command "order consumer" uv run python -m apps.order_service.workers.payment_result_worker
 start_service "payment service" "run_payment_service.sh"
 start_service "api gateway" "run_api_gateway.sh"
 

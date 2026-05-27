@@ -8,4 +8,4 @@ cd "${ROOT_DIR}"
 HOST="${HOST:-127.0.0.1}"
 PORT="${ORDER_SERVICE_PORT:-8003}"
 
-exec uv run uvicorn services.order_service.main:app --reload --host "${HOST}" --port "${PORT}"
+exec uv run uvicorn apps.order_service.app.main:app --reload --host "${HOST}" --port "${PORT}"

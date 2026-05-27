@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from packages.contracts.events import OrderCreatedEvent, OrderCreatedPayload
-from app.services.payment_service.consumers import process_payment
+from apps.payment_service.app.infrastructure.messaging.order_created_consumer import process_payment
 
 
 def _order_created_event() -> OrderCreatedEvent:
@@ -22,17 +22,17 @@ def test_process_payment_persists_success_before_publishing() -> None:
     event = _order_created_event()
 
     with (
-        patch("services.payment_service.consumers.asyncio.sleep", new=AsyncMock()),
+        patch("apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep", new=AsyncMock()),
         patch(
-            "services.payment_service.consumers.random.random",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
             return_value=0,
         ),
         patch(
-            "services.payment_service.consumers.save_payment",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment",
             new=AsyncMock(),
         ) as save_payment_mock,
         patch(
-            "services.payment_service.consumers.broker.publish",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.broker.publish",
             new=AsyncMock(),
         ) as publish_mock,
     ):
@@ -53,21 +53,21 @@ def test_process_payment_persists_failure_before_publishing() -> None:
     event = _order_created_event()
 
     with (
-        patch("services.payment_service.consumers.asyncio.sleep", new=AsyncMock()),
+        patch("apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep", new=AsyncMock()),
         patch(
-            "services.payment_service.consumers.random.random",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
             return_value=1,
         ),
         patch(
-            "services.payment_service.consumers.settings.payment_success_rate",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.settings.payment_success_rate",
             0,
         ),
         patch(
-            "services.payment_service.consumers.save_payment",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment",
             new=AsyncMock(),
         ) as save_payment_mock,
         patch(
-            "services.payment_service.consumers.broker.publish",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.broker.publish",
             new=AsyncMock(),
         ) as publish_mock,
     ):

@@ -1,1 +1,0 @@
-"""Payment service logic."""

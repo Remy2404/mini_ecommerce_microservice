@@ -4,8 +4,8 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from app.services.product_service.main import app
-from app.services.product_service.schemas import ProductResponse
+from apps.product_service.app.main import app
+from apps.product_service.app.schemas import ProductResponse
 
 
 def test_health_endpoint_returns_ok() -> None:
@@ -28,7 +28,7 @@ def test_create_product_endpoint_success() -> None:
     )
 
     with patch(
-        "services.product_service.router.create_product",
+        "apps.product_service.app.api.routes.create_product",
         new=AsyncMock(return_value=mock_product),
     ):
         with TestClient(app) as client:
@@ -72,7 +72,7 @@ def test_list_products_endpoint_success() -> None:
     ]
 
     with patch(
-        "services.product_service.router.find_products",
+        "apps.product_service.app.api.routes.find_products",
         new=AsyncMock(return_value=mock_products),
     ):
         with TestClient(app) as client:
@@ -97,7 +97,7 @@ def test_get_product_endpoint_success() -> None:
     )
 
     with patch(
-        "services.product_service.router.find_product",
+        "apps.product_service.app.api.routes.find_product",
         new=AsyncMock(return_value=mock_product),
     ):
         with TestClient(app) as client:
@@ -114,7 +114,7 @@ def test_get_product_endpoint_not_found() -> None:
     product_id = uuid4()
 
     with patch(
-        "services.product_service.router.find_product",
+        "apps.product_service.app.api.routes.find_product",
         new=AsyncMock(return_value=None),
     ):
         with TestClient(app) as client:

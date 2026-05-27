@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
 from packages.config.settings import settings
-from app.services.api_gateway.app.dependencies import auth
+from apps.api_gateway.app.infrastructure.security import wso2_client as auth
 
 
 class FakeAsyncClient:

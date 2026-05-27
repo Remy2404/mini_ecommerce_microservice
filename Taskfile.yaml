@@ -111,39 +111,39 @@ tasks:
     desc: Run API Gateway only if port 8000 is free
     cmds:
       - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.API_GATEWAY_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'API Gateway already running on port {{.API_GATEWAY_PORT}}. Not starting duplicate.'; exit 0 }"
-      - uv run uvicorn services.api_gateway.app.main:app --reload --port {{.API_GATEWAY_PORT}}
+      - uv run uvicorn apps.api_gateway.app.main:app --reload --port {{.API_GATEWAY_PORT}}
 
   run:product:
     desc: Run Product Service only if port 8001 is free
     cmds:
       - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.PRODUCT_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Product Service already running on port {{.PRODUCT_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
-      - uv run uvicorn services.product_service.main:app --reload --port {{.PRODUCT_SERVICE_PORT}}
+      - uv run uvicorn apps.product_service.app.main:app --reload --port {{.PRODUCT_SERVICE_PORT}}
 
   run:cart:
     desc: Run Cart Service only if port 8002 is free
     cmds:
       - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.CART_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Cart Service already running on port {{.CART_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
-      - uv run uvicorn services.cart_service.main:app --reload --port {{.CART_SERVICE_PORT}}
+      - uv run uvicorn apps.cart_service.app.main:app --reload --port {{.CART_SERVICE_PORT}}
 
   run:order:
     desc: Run Order Service only if port 8003 is free
     cmds:
       - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.ORDER_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Order Service already running on port {{.ORDER_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
-      - uv run uvicorn services.order_service.main:app --reload --port {{.ORDER_SERVICE_PORT}}
+      - uv run uvicorn apps.order_service.app.main:app --reload --port {{.ORDER_SERVICE_PORT}}
 
   run:payment-consumer:
     desc: Run Payment consumer, check RabbitMQ queues first
     cmds:
       - task: rabbitmq:queues
       - echo "Check queue consumers above before starting this. Stop if payment consumer already exists."
-      - uv run python -m services.payment_service.consumers
+      - uv run python -m apps.payment_service.workers.payment_worker
 
   run:order-consumer:
     desc: Run Order result consumer, check RabbitMQ queues first
     cmds:
       - task: rabbitmq:queues
       - echo "Check queue consumers above before starting this. Stop if order consumer already exists."
-      - uv run python -m services.order_service.consumers
+      - uv run python -m apps.order_service.workers.payment_result_worker
 
   # -----------------------------
   # Tests and quality

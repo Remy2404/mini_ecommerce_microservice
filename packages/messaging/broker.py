@@ -1,7 +1,7 @@
 from faststream.rabbit import RabbitBroker, RabbitExchange, RabbitQueue
 from faststream.rabbit.schemas.constants import ExchangeType
 from packages.config.settings import settings
-from packages.contracts.topics import ExchangeName, QueueName, RoutingKey
+from packages.contracts.order.topics import ExchangeName, QueueName, RoutingKey
 
 broker = RabbitBroker(settings.rabbitmq_url)
 

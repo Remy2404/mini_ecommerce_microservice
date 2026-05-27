@@ -5,14 +5,15 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from app.services.order_service.main import app
+from apps.order_service.app.application import services as order_services
+from apps.order_service.app.main import app
 
 
 def test_health_endpoint_returns_ok() -> None:
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
     ):
@@ -24,32 +25,35 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_create_order_endpoint_returns_created_order() -> None:
-    from app.services.order_service.cart_reader import CartSnapshot
+    from apps.order_service.app.infrastructure.clients.cart_client import CartSnapshot
 
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
         patch(
-            "services.order_service.router.broker.publish",
+            "apps.order_service.app.infrastructure.messaging.order_event_publisher.broker.publish",
             new=AsyncMock(),
         ) as publish_mock,
-        patch(
-            "services.order_service.router.get_cart_snapshot",
+        patch.object(
+            order_services,
+            "get_cart_snapshot",
             return_value=CartSnapshot(
                 cart_id="cart_user_123",
                 total_amount=Decimal("150.00"),
                 items=[],
             ),
         ),
-        patch(
-            "services.order_service.router.save_order_status",
+        patch.object(
+            order_services,
+            "save_order_status",
             new=AsyncMock(),
         ),
-        patch(
-            "services.order_service.router.save_order",
+        patch.object(
+            order_services,
+            "save_order",
             new=AsyncMock(),
         ) as save_order_mock,
     ):
@@ -67,15 +71,15 @@ def test_create_order_endpoint_returns_created_order() -> None:
     save_order_mock.assert_awaited_once()
 
 
-@patch("services.order_service.consumers.save_order_status", new_callable=AsyncMock)
-@patch("services.order_service.consumers.get_valkey_client")
-@patch("services.order_service.consumers.setup_logging")
-@patch("services.order_service.consumers.setup_tracing")
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.save_order_status", new_callable=AsyncMock)
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.get_valkey_client")
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_logging")
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_tracing")
 def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_save_status
 ) -> None:
     from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
-    from app.services.order_service.consumers import handle_payment_result
+    from apps.order_service.app.infrastructure.messaging.payment_result_consumer import handle_payment_result
     import asyncio
 
     event = PaymentSuccessEvent(
@@ -100,16 +104,17 @@ def test_handle_payment_success_clears_cart(
 
 
 def test_create_order_cart_not_found() -> None:
-    from app.services.order_service.cart_reader import CartNotFoundError
+    from apps.order_service.app.infrastructure.clients.cart_client import CartNotFoundError
 
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
-        patch(
-            "services.order_service.router.get_cart_snapshot",
+        patch.object(
+            order_services,
+            "get_cart_snapshot",
             side_effect=CartNotFoundError("Cart not found"),
         ),
     ):
@@ -122,16 +127,17 @@ def test_create_order_cart_not_found() -> None:
 
 
 def test_create_order_cart_empty() -> None:
-    from app.services.order_service.cart_reader import EmptyCartError
+    from apps.order_service.app.infrastructure.clients.cart_client import EmptyCartError
 
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
-        patch(
-            "services.order_service.router.get_cart_snapshot",
+        patch.object(
+            order_services,
+            "get_cart_snapshot",
             side_effect=EmptyCartError("Cart is empty"),
         ),
     ):
@@ -145,13 +151,13 @@ def test_create_order_cart_empty() -> None:
 
 def test_get_order_success() -> None:
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
         patch(
-            "services.order_service.router.get_order_status",
+            "apps.order_service.app.api.routes.get_order_status",
             new=AsyncMock(return_value="PENDING"),
         ),
     ):
@@ -167,13 +173,13 @@ def test_get_order_success() -> None:
 
 def test_get_order_not_found() -> None:
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
         patch(
-            "services.order_service.router.get_order_status",
+            "apps.order_service.app.api.routes.get_order_status",
             new=AsyncMock(return_value=None),
         ),
     ):
@@ -187,13 +193,13 @@ def test_get_order_not_found() -> None:
 
 def test_list_orders() -> None:
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
         patch(
-            "services.order_service.router.get_all_orders",
+            "apps.order_service.app.api.routes.get_all_orders",
             new=AsyncMock(
                 return_value={"order_123": "PENDING", "order_456": "CONFIRMED"}
             ),
@@ -210,9 +216,9 @@ def test_list_orders() -> None:
 
 def test_metrics_endpoint_returns_prometheus_data() -> None:
     with (
-        patch("services.order_service.main.broker.connect", new=AsyncMock()),
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
         patch(
-            "services.order_service.main.broker.close",
+            "apps.order_service.app.main.broker.close",
             new=AsyncMock(),
         ),
     ):

@@ -5,9 +5,10 @@ import httpx
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from app.services.cart_service import service as cart_service
-from app.services.cart_service.main import app
-from app.services.cart_service.schemas import CartItemResponse, CartResponse
+from apps.cart_service.app.application import services as cart_service
+from apps.cart_service.app.infrastructure.clients import product_client
+from apps.cart_service.app.main import app
+from apps.cart_service.app.schemas import CartItemResponse, CartResponse
 
 PRODUCT_ID = uuid4()
 
@@ -76,7 +77,7 @@ def _install_cart_fakes(
 ) -> list[CartResponse]:
     saved_carts: list[CartResponse] = []
 
-    monkeypatch.setattr(cart_service.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(product_client.httpx, "AsyncClient", FakeAsyncClient)
     monkeypatch.setattr(settings, "product_service_url", "http://product-service")
     monkeypatch.setattr(settings, "gateway_request_timeout_seconds", 3.0)
     monkeypatch.setattr(
