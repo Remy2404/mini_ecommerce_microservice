@@ -5,12 +5,14 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from packages.database.session import Base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class User(Base):
+class AuthBase(DeclarativeBase):
+    """Declarative base scoped to the Auth Service database."""
+
+
+class User(AuthBase):
     __tablename__ = "users"
 
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -25,7 +27,7 @@ class User(Base):
     roles: Mapped[list["UserRole"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
-class UserProfile(Base):
+class UserProfile(AuthBase):
     __tablename__ = "user_profiles"
 
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
@@ -35,7 +37,7 @@ class UserProfile(Base):
     user: Mapped[User] = relationship(back_populates="profile")
 
 
-class UserAddress(Base):
+class UserAddress(AuthBase):
     __tablename__ = "user_addresses"
 
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -52,7 +54,7 @@ class UserAddress(Base):
     user: Mapped[User] = relationship(back_populates="addresses")
 
 
-class Role(Base):
+class Role(AuthBase):
     __tablename__ = "roles"
 
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -61,7 +63,7 @@ class Role(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
 
-class UserRole(Base):
+class UserRole(AuthBase):
     __tablename__ = "user_roles"
 
     user_id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

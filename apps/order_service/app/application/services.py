@@ -8,11 +8,11 @@ from apps.order_service.app.infrastructure.database.repository import (
     clear_orders,
     get_order_status_by_id,
     list_order_statuses,
-    save_order,
+    save_order_with_outbox,
     update_order_status,
 )
-from apps.order_service.app.infrastructure.messaging.order_event_publisher import (
-    publish_order_created,
+from apps.order_service.app.infrastructure.messaging.outbox_publisher import (
+    publish_pending_order_events,
 )
 from packages.config.settings import settings
 from packages.contracts.order.events import OrderCreatedEvent, OrderCreatedPayload
@@ -49,7 +49,7 @@ async def create_order_for_user(user_id: str) -> CreatedOrder:
         )
     )
 
-    await save_order(
+    await save_order_with_outbox(
         order_id=order_id,
         user_id=user_id,
         cart_id=cart_id,
@@ -58,6 +58,11 @@ async def create_order_for_user(user_id: str) -> CreatedOrder:
         currency=event.payload.currency,
         correlation_id=event.correlation_id,
         items=cart.items,
+        event_id=event.event_id,
+        event_type=event.event_type,
+        routing_key=RoutingKey.ORDER_CREATED,
+        event_payload=event.model_dump(mode="json"),
+        trace_id=event.trace_id,
     )
 
     add_span_attributes(
@@ -68,7 +73,7 @@ async def create_order_for_user(user_id: str) -> CreatedOrder:
         }
     )
 
-    await publish_order_created(event)
+    await publish_pending_order_events(limit=10)
 
     order_created_total.labels(
         service_name=settings.order_service_name,
@@ -79,13 +84,8 @@ async def create_order_for_user(user_id: str) -> CreatedOrder:
         routing_key=RoutingKey.ORDER_CREATED,
     ).inc()
 
-    await save_order_status(
-        order_id=str(order_id),
-        status=OrderStatus.PENDING,
-    )
-
     logger.info(
-        "Order created event published",
+        "Order created event persisted to outbox",
         order_id=str(order_id),
         user_id=user_id,
         routing_key=RoutingKey.ORDER_CREATED,

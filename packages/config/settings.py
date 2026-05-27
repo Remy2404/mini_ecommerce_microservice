@@ -244,6 +244,18 @@ class Settings(BaseSettings):
     payment_result_queue: str = Field(..., validation_alias="PAYMENT_RESULT_QUEUE")
     cart_restore_queue: str = Field(..., validation_alias="CART_RESTORE_QUEUE")
     dead_letter_queue: str = Field(..., validation_alias="DEAD_LETTER_QUEUE")
+    rabbitmq_retry_max_attempts: int = Field(
+        3,
+        validation_alias="RABBITMQ_RETRY_MAX_ATTEMPTS",
+    )
+    rabbitmq_retry_delay_ms: int = Field(
+        5000,
+        validation_alias="RABBITMQ_RETRY_DELAY_MS",
+    )
+    rabbitmq_retry_backoff_multiplier: float = Field(
+        2.0,
+        validation_alias="RABBITMQ_RETRY_BACKOFF_MULTIPLIER",
+    )
 
     @property
     def cors_origins(self) -> list[str]:
@@ -252,6 +264,22 @@ class Settings(BaseSettings):
             for origin in self.cors_allowed_origins.split(",")
             if origin.strip()
         ]
+
+    def service_database_url(self, database_name: str) -> str:
+        """Build an async PostgreSQL URL from shared connection settings."""
+        return (
+            "postgresql+asyncpg://"
+            f"{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}"
+            f"/{database_name}"
+        )
+
+    @property
+    def resolved_auth_database_url(self) -> str:
+        """Return explicit auth URL or derive one from the auth DB name."""
+        return self.auth_database_url or self.service_database_url(
+            self.auth_database_name
+        )
 
     @property
     def api_gateway(self) -> str:

@@ -34,9 +34,9 @@ def test_create_order_endpoint_returns_created_order() -> None:
             new=AsyncMock(),
         ),
         patch(
-            "apps.order_service.app.infrastructure.messaging.order_event_publisher.broker.publish",
+            "apps.order_service.app.application.services.publish_pending_order_events",
             new=AsyncMock(),
-        ) as publish_mock,
+        ) as publish_pending_mock,
         patch.object(
             order_services,
             "get_cart_snapshot",
@@ -48,14 +48,9 @@ def test_create_order_endpoint_returns_created_order() -> None:
         ),
         patch.object(
             order_services,
-            "save_order_status",
+            "save_order_with_outbox",
             new=AsyncMock(),
-        ),
-        patch.object(
-            order_services,
-            "save_order",
-            new=AsyncMock(),
-        ) as save_order_mock,
+        ) as save_order_with_outbox_mock,
     ):
         with TestClient(app) as client:
             response = client.post("/orders", json={"user_id": "user_123"})
@@ -67,16 +62,16 @@ def test_create_order_endpoint_returns_created_order() -> None:
     assert body["message"] == "Order created successfully"
     assert body["data"]["order_id"]
     assert body["data"]["status"] == "PENDING"
-    publish_mock.assert_awaited_once()
-    save_order_mock.assert_awaited_once()
+    publish_pending_mock.assert_awaited_once()
+    save_order_with_outbox_mock.assert_awaited_once()
 
 
-@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.save_order_status", new_callable=AsyncMock)
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.apply_payment_result_once", new_callable=AsyncMock)
 @patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.get_valkey_client")
 @patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_logging")
 @patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_tracing")
 def test_handle_payment_success_clears_cart(
-    mock_setup_tracing, mock_setup_logging, mock_valkey, mock_save_status
+    mock_setup_tracing, mock_setup_logging, mock_valkey, mock_apply_result
 ) -> None:
     from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
     from apps.order_service.app.infrastructure.messaging.payment_result_consumer import handle_payment_result
@@ -92,12 +87,15 @@ def test_handle_payment_success_clears_cart(
     )
 
     mock_client = mock_valkey.return_value
+    mock_apply_result.return_value = True
 
     # Run the async consumer function in the event loop
     asyncio.run(handle_payment_result(event))
 
-    mock_save_status.assert_awaited_once_with(
-        order_id=str(event.payload.order_id),
+    mock_apply_result.assert_awaited_once_with(
+        event_id=event.event_id,
+        event_type=event.event_type,
+        order_id=event.payload.order_id,
         status="CONFIRMED",
     )
     mock_client.delete.assert_called_once_with("cart:user_123")

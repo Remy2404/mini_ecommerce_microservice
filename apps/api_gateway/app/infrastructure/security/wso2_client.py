@@ -115,11 +115,19 @@ async def validate_token(
     token = credentials.credentials
     try:
         if _is_jwt_token(token):
-            if settings.jwt_secret_key.get_secret_value():
+            try:
+                token_header = jwt.get_unverified_header(token)
+            except JWTError as exc:
+                raise _invalid_token() from exc
+
+            if (
+                token_header.get("alg") == "HS256"
+                and settings.jwt_secret_key.get_secret_value()
+            ):
                 try:
                     return decode_access_token(token)
-                except UnauthorizedError:
-                    return await validate_jwt_token(token)
+                except UnauthorizedError as exc:
+                    raise _invalid_token() from exc
 
             return await validate_jwt_token(token)
 

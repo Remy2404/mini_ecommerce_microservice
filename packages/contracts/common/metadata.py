@@ -20,3 +20,5 @@ class BaseEvent(BaseModel):
     trace_id: str | None = None
     correlation_id: str = Field(default_factory=lambda: f"corr_{uuid4()}")
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    retry_count: int = 0
+    last_error: str | None = None

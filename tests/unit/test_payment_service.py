@@ -28,25 +28,27 @@ def test_process_payment_persists_success_before_publishing() -> None:
             return_value=0,
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment",
-            new=AsyncMock(),
-        ) as save_payment_mock,
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+            new=AsyncMock(return_value=True),
+        ) as save_payment_with_outbox_mock,
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.broker.publish",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
             new=AsyncMock(),
-        ) as publish_mock,
+        ) as publish_pending_mock,
     ):
         asyncio.run(process_payment(event))
 
-    save_payment_mock.assert_awaited_once()
-    saved_payment = save_payment_mock.await_args.kwargs
+    save_payment_with_outbox_mock.assert_awaited_once()
+    saved_payment = save_payment_with_outbox_mock.await_args.kwargs
     assert saved_payment["order_id"] == event.payload.order_id
     assert saved_payment["user_id"] == "user_123"
     assert saved_payment["status"] == "SUCCESS"
     assert saved_payment["amount"] == Decimal("150.00")
     assert saved_payment["failure_reason"] is None
     assert saved_payment["correlation_id"] == event.correlation_id
-    publish_mock.assert_awaited_once()
+    assert saved_payment["source_event_id"] == event.event_id
+    assert saved_payment["routing_key"] == "payment.succeeded.v1"
+    publish_pending_mock.assert_awaited_once()
 
 
 def test_process_payment_persists_failure_before_publishing() -> None:
@@ -63,22 +65,24 @@ def test_process_payment_persists_failure_before_publishing() -> None:
             0,
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment",
-            new=AsyncMock(),
-        ) as save_payment_mock,
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+            new=AsyncMock(return_value=True),
+        ) as save_payment_with_outbox_mock,
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.broker.publish",
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
             new=AsyncMock(),
-        ) as publish_mock,
+        ) as publish_pending_mock,
     ):
         asyncio.run(process_payment(event))
 
-    save_payment_mock.assert_awaited_once()
-    saved_payment = save_payment_mock.await_args.kwargs
+    save_payment_with_outbox_mock.assert_awaited_once()
+    saved_payment = save_payment_with_outbox_mock.await_args.kwargs
     assert saved_payment["order_id"] == event.payload.order_id
     assert saved_payment["user_id"] == "user_123"
     assert saved_payment["status"] == "FAILED"
     assert saved_payment["amount"] == Decimal("150.00")
     assert saved_payment["failure_reason"] == "Simulated payment failure"
     assert saved_payment["correlation_id"] == event.correlation_id
-    publish_mock.assert_awaited_once()
+    assert saved_payment["source_event_id"] == event.event_id
+    assert saved_payment["routing_key"] == "payment.failed.v1"
+    publish_pending_mock.assert_awaited_once()

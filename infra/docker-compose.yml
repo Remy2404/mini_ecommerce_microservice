@@ -12,6 +12,12 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
       - ecommerce-net
 
@@ -24,6 +30,12 @@ services:
     volumes:
       - valkey-data:/data
       - ./valkey/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     networks:
       - ecommerce-net
 
@@ -39,6 +51,12 @@ services:
     volumes:
       - postgres-primary-data:/var/lib/postgresql/data
       - ./postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ecommerce -d ecommerce']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
       - ecommerce-net
 
@@ -53,8 +71,15 @@ services:
       POSTGRES_DB: ecommerce
     volumes:
       - postgres-replica-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ecommerce -d ecommerce']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - postgres-primary
+      postgres-primary:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -131,8 +156,21 @@ services:
       - ../.env
     ports:
       - '8005:8005'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8005/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - postgres-primary
+      postgres-primary:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -146,9 +184,23 @@ services:
       - ../.env
     ports:
       - '8001:8001'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - postgres-primary
-      - valkey
+      postgres-primary:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -162,9 +214,23 @@ services:
       - ../.env
     ports:
       - '8002:8002'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - valkey
-      - product-service
+      valkey:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -178,10 +244,25 @@ services:
       - ../.env
     ports:
       - '8003:8003'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - postgres-primary
-      - rabbitmq
-      - valkey
+      postgres-primary:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -195,10 +276,25 @@ services:
       - ../.env
     ports:
       - '8004:8004'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8004/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - postgres-primary
-      - rabbitmq
-      - valkey
+      postgres-primary:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -212,9 +308,36 @@ services:
       - ../.env
     command: ['uv', 'run', 'python', '-m', 'apps.payment_service.workers.payment_worker']
     depends_on:
-      - postgres-primary
-      - rabbitmq
-      - valkey
+      postgres-primary:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  payment-outbox-publisher:
+    build:
+      context: ..
+      dockerfile: apps/payment_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    command:
+      [
+        'uv',
+        'run',
+        'python',
+        '-m',
+        'apps.payment_service.workers.outbox_publisher_worker',
+      ]
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -228,9 +351,36 @@ services:
       - ../.env
     command: ['uv', 'run', 'python', '-m', 'apps.order_service.workers.payment_result_worker']
     depends_on:
-      - postgres-primary
-      - rabbitmq
-      - valkey
+      postgres-primary:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  order-outbox-publisher:
+    build:
+      context: ..
+      dockerfile: apps/order_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    command:
+      [
+        'uv',
+        'run',
+        'python',
+        '-m',
+        'apps.order_service.workers.outbox_publisher_worker',
+      ]
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - ecommerce-net
 
@@ -244,12 +394,29 @@ services:
       - ../.env
     ports:
       - '8000:8000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     depends_on:
-      - auth-service
-      - product-service
-      - cart-service
-      - order-service
-      - payment-service
+      auth-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      cart-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
     networks:
       - ecommerce-net
 

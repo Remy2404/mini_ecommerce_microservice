@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from apps.api_gateway.app.api.dependencies import rate_limit, validate_token
 from apps.api_gateway.app.infrastructure.http.proxy_client import forward_request
+from packages.config.settings import settings
+from packages.errors.exceptions import ForbiddenError
+from packages.security.permissions import require_owner_or_role
 
 router = APIRouter()
 
@@ -23,6 +26,39 @@ async def enforce_gateway_access(
 ) -> dict:
     await rate_limit(request, payload)
     return payload
+
+
+def enforce_user_scope(payload: dict, resource_user_id: str) -> None:
+    if not settings.gateway_auth_enabled:
+        return
+
+    try:
+        require_owner_or_role(
+            resource_owner_id=resource_user_id,
+            current_user_id=str(payload.get("sub", "")),
+            user_roles=payload.get("roles", []),
+            role="admin",
+        )
+    except ForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        ) from exc
+
+
+async def enforce_body_user_scope(request: Request, payload: dict) -> None:
+    if not settings.gateway_auth_enabled:
+        return
+
+    body = await request.json()
+    user_id = body.get("user_id") if isinstance(body, dict) else None
+    if not user_id:
+        raise HTTPException(
+            status_code=422,
+            detail="user_id is required",
+        )
+
+    enforce_user_scope(payload, str(user_id))
 
 
 @router.get("/products", tags=["Product Gateway"])
@@ -128,8 +164,9 @@ async def get_product(
 async def get_cart(
     user_id: str,
     request: Request,
-    _: dict = Depends(enforce_gateway_access),
+    payload: dict = Depends(enforce_gateway_access),
 ):
+    enforce_user_scope(payload, user_id)
     return await forward_request("cart", user_id, request)
 
 
@@ -140,8 +177,9 @@ async def get_cart(
 )
 async def add_cart_item(
     request: Request,
-    _: dict = Depends(enforce_gateway_access),
+    payload: dict = Depends(enforce_gateway_access),
 ):
+    await enforce_body_user_scope(request, payload)
     return await forward_request("cart", "items", request)
 
 
@@ -150,8 +188,9 @@ async def remove_cart_item(
     user_id: str,
     product_id: str,
     request: Request,
-    _: dict = Depends(enforce_gateway_access),
+    payload: dict = Depends(enforce_gateway_access),
 ):
+    enforce_user_scope(payload, user_id)
     return await forward_request("cart", f"{user_id}/items/{product_id}", request)
 
 
@@ -159,8 +198,9 @@ async def remove_cart_item(
 async def clear_cart(
     user_id: str,
     request: Request,
-    _: dict = Depends(enforce_gateway_access),
+    payload: dict = Depends(enforce_gateway_access),
 ):
+    enforce_user_scope(payload, user_id)
     return await forward_request("cart", user_id, request)
 
 
@@ -179,8 +219,9 @@ async def list_orders(
 )
 async def create_order(
     request: Request,
-    _: dict = Depends(enforce_gateway_access),
+    payload: dict = Depends(enforce_gateway_access),
 ):
+    await enforce_body_user_scope(request, payload)
     return await forward_request("orders", "", request)
 
 

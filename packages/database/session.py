@@ -24,7 +24,7 @@ def get_sessionmaker(database_url: str) -> async_sessionmaker[AsyncSession]:
 
 def get_service_sessionmaker(service_name: str) -> async_sessionmaker[AsyncSession]:
     database_urls = {
-        "auth": settings.auth_database_url,
+        "auth": settings.resolved_auth_database_url,
         "product": settings.products_database_url,
         "products": settings.products_database_url,
         "order": settings.orders_database_url,
@@ -67,7 +67,7 @@ async def session_scope(database_url: str) -> AsyncIterator[AsyncSession]:
             raise
 
 
-auth_sessionmaker = get_sessionmaker(settings.auth_database_url) if settings.auth_database_url else None
+auth_sessionmaker = get_sessionmaker(settings.resolved_auth_database_url)
 products_sessionmaker = get_sessionmaker(settings.products_database_url)
 orders_sessionmaker = get_sessionmaker(settings.orders_database_url)
 payments_sessionmaker = get_sessionmaker(settings.payments_database_url)

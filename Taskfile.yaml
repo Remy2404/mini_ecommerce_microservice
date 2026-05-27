@@ -155,6 +155,20 @@ tasks:
       - echo "Check queue consumers above before starting this. Stop if order consumer already exists."
       - uv run python -m apps.order_service.workers.payment_result_worker
 
+  run:order-outbox:
+    desc: Run Order Service outbox publisher, check RabbitMQ queues first
+    cmds:
+      - task: rabbitmq:queues
+      - echo "Check worker processes before starting this. Stop if an order outbox publisher already exists."
+      - uv run python -m apps.order_service.workers.outbox_publisher_worker
+
+  run:payment-outbox:
+    desc: Run Payment Service outbox publisher, check RabbitMQ queues first
+    cmds:
+      - task: rabbitmq:queues
+      - echo "Check worker processes before starting this. Stop if a payment outbox publisher already exists."
+      - uv run python -m apps.payment_service.workers.outbox_publisher_worker
+
   # -----------------------------
   # Tests and quality
   # -----------------------------
@@ -255,6 +269,46 @@ tasks:
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.AUTH_DB}} -c "\dt"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.ORDERS_DB}} -c "\dt"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PAYMENTS_DB}} -c "\dt"
+
+  db:reset:all:
+    desc: Drop and recreate service databases in the existing PostgreSQL container
+    cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "DROP DATABASE IF EXISTS {{.AUTH_DB}} WITH (FORCE);"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "DROP DATABASE IF EXISTS {{.PRODUCTS_DB}} WITH (FORCE);"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "DROP DATABASE IF EXISTS {{.ORDERS_DB}} WITH (FORCE);"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "DROP DATABASE IF EXISTS {{.PAYMENTS_DB}} WITH (FORCE);"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "CREATE DATABASE {{.AUTH_DB}};"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "CREATE DATABASE {{.PRODUCTS_DB}};"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "CREATE DATABASE {{.ORDERS_DB}};"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d postgres -c "CREATE DATABASE {{.PAYMENTS_DB}};"
+
+  migrate:auth:
+    desc: Run Auth Service Alembic migrations
+    cmds:
+      - uv run alembic -c apps/auth_service/alembic.ini upgrade head
+
+  migrate:product:
+    desc: Run Product Service Alembic migrations
+    cmds:
+      - uv run alembic -c apps/product_service/alembic.ini upgrade head
+
+  migrate:order:
+    desc: Run Order Service Alembic migrations
+    cmds:
+      - uv run alembic -c apps/order_service/alembic.ini upgrade head
+
+  migrate:payment:
+    desc: Run Payment Service Alembic migrations
+    cmds:
+      - uv run alembic -c apps/payment_service/alembic.ini upgrade head
+
+  migrate:all:
+    desc: Run all service Alembic migrations
+    cmds:
+      - task: migrate:auth
+      - task: migrate:product
+      - task: migrate:order
+      - task: migrate:payment
 
   # -----------------------------
   # Smoke checks through running services

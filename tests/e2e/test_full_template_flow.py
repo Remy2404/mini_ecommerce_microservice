@@ -152,9 +152,8 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
             ],
         ),
     )
-    monkeypatch.setattr(order_services, "save_order", _async_noop)
-    monkeypatch.setattr(order_services, "save_order_status", _async_noop)
-    monkeypatch.setattr(order_services, "publish_order_created", _async_noop)
+    monkeypatch.setattr(order_services, "save_order_with_outbox", _async_noop)
+    monkeypatch.setattr(order_services, "publish_pending_order_events", _async_noop)
 
     order = asyncio.run(order_services.create_order_for_user(str(registered.user_id)))
 
@@ -170,8 +169,12 @@ def test_e2e_payment_success_updates_order_and_clears_cart(monkeypatch) -> None:
     updated_statuses = []
 
     monkeypatch.setattr(
-        "apps.order_service.app.infrastructure.messaging.payment_result_consumer.save_order_status",
-        lambda order_id, status: _record_async(updated_statuses, (order_id, status)),
+        "apps.order_service.app.infrastructure.messaging.payment_result_consumer.apply_payment_result_once",
+        lambda event_id, event_type, order_id, status: _return_and_record_async(
+            updated_statuses,
+            (str(order_id), status),
+            True,
+        ),
     )
 
     class FakeValkey:
@@ -207,8 +210,12 @@ def test_e2e_payment_failure_updates_order_and_keeps_cart(monkeypatch) -> None:
     updated_statuses = []
 
     monkeypatch.setattr(
-        "apps.order_service.app.infrastructure.messaging.payment_result_consumer.save_order_status",
-        lambda order_id, status: _record_async(updated_statuses, (order_id, status)),
+        "apps.order_service.app.infrastructure.messaging.payment_result_consumer.apply_payment_result_once",
+        lambda event_id, event_type, order_id, status: _return_and_record_async(
+            updated_statuses,
+            (str(order_id), status),
+            True,
+        ),
     )
 
     class FakeValkey:
@@ -239,9 +246,9 @@ def test_e2e_payment_failure_updates_order_and_keeps_cart(monkeypatch) -> None:
     assert fake_valkey.deleted == []
 
 
-def test_e2e_payment_worker_publishes_success_and_failure(monkeypatch) -> None:
-    published = []
+def test_e2e_payment_worker_persists_outbox_and_publishes(monkeypatch) -> None:
     saved = []
+    published_batches = []
     event = OrderCreatedEvent(
         payload=OrderCreatedPayload(
             order_id=uuid4(),
@@ -260,24 +267,20 @@ def test_e2e_payment_worker_publishes_success_and_failure(monkeypatch) -> None:
         lambda delay: _return_async(None),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment",
-        lambda **kwargs: _record_async(saved, kwargs),
+        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+        lambda **kwargs: _return_and_record_async(saved, kwargs, True),
     )
-
-    class FakeBroker:
-        async def publish(self, **kwargs):
-            published.append(kwargs)
-
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.broker",
-        FakeBroker(),
+        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
+        lambda limit: _return_and_record_async(published_batches, limit, 1),
     )
     monkeypatch.setattr(settings, "payment_success_rate", 1.0)
 
     asyncio.run(process_payment(event))
 
     assert saved[0]["status"] == "SUCCESS"
-    assert published[0]["routing_key"] == "payment.succeeded.v1"
+    assert saved[0]["routing_key"] == "payment.succeeded.v1"
+    assert published_batches == [10]
 
 
 def test_e2e_gateway_route_metrics_and_auth(monkeypatch) -> None:
@@ -309,6 +312,11 @@ async def _async_noop(*args, **kwargs) -> None:
 
 async def _record_async(target: list, value) -> None:
     target.append(value)
+
+
+async def _return_and_record_async(target: list, value, return_value):
+    target.append(value)
+    return return_value
 
 
 async def _return_async(value):

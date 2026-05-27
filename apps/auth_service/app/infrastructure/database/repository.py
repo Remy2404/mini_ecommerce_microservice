@@ -48,7 +48,7 @@ def _address_response(address: UserAddress) -> AddressResponse:
 
 class AuthRepository:
     def __init__(self, database_url: str | None = None) -> None:
-        self.database_url = database_url or settings.auth_database_url
+        self.database_url = database_url or settings.resolved_auth_database_url
 
     async def _session(self):
         if not self.database_url:

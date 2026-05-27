@@ -6,12 +6,14 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from packages.database.session import Base
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
-class Category(Base):
+class ProductBase(DeclarativeBase):
+    """Declarative base scoped to the Product Service database."""
+
+
+class Category(ProductBase):
     __tablename__ = "categories"
 
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -24,7 +26,7 @@ class Category(Base):
     products: Mapped[list["Product"]] = relationship(back_populates="category")
 
 
-class Product(Base):
+class Product(ProductBase):
     __tablename__ = "products"
 
     id: Mapped[UUID] = mapped_column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
