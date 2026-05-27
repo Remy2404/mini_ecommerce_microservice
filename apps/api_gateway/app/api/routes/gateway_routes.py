@@ -34,6 +34,76 @@ async def list_products(
 
 
 @router.post(
+    "/auth/register",
+    tags=["Auth Gateway"],
+    openapi_extra=JSON_REQUEST_BODY,
+)
+async def register_user(
+    request: Request,
+):
+    return await forward_request("auth", "register", request)
+
+
+@router.post(
+    "/auth/login",
+    tags=["Auth Gateway"],
+    openapi_extra=JSON_REQUEST_BODY,
+)
+async def login_user(
+    request: Request,
+):
+    return await forward_request("auth", "login", request)
+
+
+@router.get("/auth/me", tags=["Auth Gateway"])
+async def get_me(
+    request: Request,
+    _: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request("auth", "me", request)
+
+
+@router.post(
+    "/auth/addresses",
+    tags=["Auth Gateway"],
+    openapi_extra=JSON_REQUEST_BODY,
+)
+async def create_address(
+    request: Request,
+    _: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request("auth", "addresses", request)
+
+
+@router.get("/auth/addresses", tags=["Auth Gateway"])
+async def list_addresses(
+    request: Request,
+    _: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request("auth", "addresses", request)
+
+
+@router.post(
+    "/categories",
+    tags=["Category Gateway"],
+    openapi_extra=JSON_REQUEST_BODY,
+)
+async def create_category(
+    request: Request,
+    _: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request("categories", "", request)
+
+
+@router.get("/categories", tags=["Category Gateway"])
+async def list_categories(
+    request: Request,
+    _: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request("categories", "", request)
+
+
+@router.post(
     "/products",
     tags=["Product Gateway"],
     openapi_extra=JSON_REQUEST_BODY,
@@ -121,3 +191,12 @@ async def get_order(
     _: dict = Depends(enforce_gateway_access),
 ):
     return await forward_request("orders", order_id, request)
+
+
+@router.get("/payments/{payment_id}", tags=["Payment Gateway"])
+async def get_payment(
+    payment_id: str,
+    request: Request,
+    _: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request("payments", payment_id, request)

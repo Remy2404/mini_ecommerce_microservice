@@ -19,7 +19,7 @@ order_created_queue = RabbitQueue(
 
 payment_result_queue = RabbitQueue(
     name=QueueName.PAYMENT_RESULT,
-    routing_key="payment.*",
+    routing_key="payment.*.v1",
     durable=True,
 )
 

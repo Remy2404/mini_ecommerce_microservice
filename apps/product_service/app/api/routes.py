@@ -8,8 +8,19 @@ from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
 from packages.observability.logging import get_logger
 from packages.observability.tracing import add_span_attributes
-from apps.product_service.app.schemas import CreateProductRequest, ProductResponse
-from apps.product_service.app.application.services import create_product, find_product, find_products
+from apps.product_service.app.schemas import (
+    CategoryResponse,
+    CreateCategoryRequest,
+    CreateProductRequest,
+    ProductResponse,
+)
+from apps.product_service.app.application.services import (
+    create_category_for_catalog,
+    create_product,
+    find_categories,
+    find_product,
+    find_products,
+)
 
 router = APIRouter()
 
@@ -24,6 +35,33 @@ async def health() -> dict[str, str]:
         "status": "ok",
         "service": settings.product_service_name,
     }
+
+
+@router.post(
+    "/categories",
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_category_endpoint(
+    request: CreateCategoryRequest,
+) -> ApiResponse[CategoryResponse]:
+    category = await create_category_for_catalog(request)
+
+    return ApiResponse[CategoryResponse](
+        success=True,
+        message="Category created successfully",
+        data=category,
+    )
+
+
+@router.get("/categories")
+async def list_categories_endpoint() -> ApiResponse[list[CategoryResponse]]:
+    categories = await find_categories()
+
+    return ApiResponse[list[CategoryResponse]](
+        success=True,
+        message="Categories fetched successfully",
+        data=categories,
+    )
 
 
 @router.post(

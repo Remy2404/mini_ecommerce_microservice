@@ -5,6 +5,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
 from packages.config.settings import settings
+from packages.errors.exceptions import UnauthorizedError
+from packages.security.jwt import decode_access_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
 _jwks_cache: dict = {}
@@ -113,6 +115,12 @@ async def validate_token(
     token = credentials.credentials
     try:
         if _is_jwt_token(token):
+            if settings.jwt_secret_key.get_secret_value():
+                try:
+                    return decode_access_token(token)
+                except UnauthorizedError:
+                    return await validate_jwt_token(token)
+
             return await validate_jwt_token(token)
 
         return await introspect_access_token(token)

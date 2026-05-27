@@ -11,6 +11,7 @@ services:
       RABBITMQ_DEFAULT_VHOST: ecommerce
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     networks:
       - ecommerce-net
 
@@ -19,9 +20,10 @@ services:
     container_name: ecommerce-valkey
     ports:
       - '6379:6379'
-    command: ['valkey-server', '--appendonly', 'yes']
+    command: ['valkey-server', '/usr/local/etc/valkey/valkey.conf']
     volumes:
       - valkey-data:/data
+      - ./valkey/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
     networks:
       - ecommerce-net
 
@@ -36,6 +38,7 @@ services:
       POSTGRES_DB: ecommerce
     volumes:
       - postgres-primary-data:/var/lib/postgresql/data
+      - ./postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
     networks:
       - ecommerce-net
 
@@ -101,6 +104,8 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
     networks:
@@ -113,6 +118,138 @@ services:
       - '9443:9443'
     profiles:
       - identity
+    networks:
+      - ecommerce-net
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: apps/auth_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    ports:
+      - '8005:8005'
+    depends_on:
+      - postgres-primary
+    networks:
+      - ecommerce-net
+
+  product-service:
+    build:
+      context: ..
+      dockerfile: apps/product_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    ports:
+      - '8001:8001'
+    depends_on:
+      - postgres-primary
+      - valkey
+    networks:
+      - ecommerce-net
+
+  cart-service:
+    build:
+      context: ..
+      dockerfile: apps/cart_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    ports:
+      - '8002:8002'
+    depends_on:
+      - valkey
+      - product-service
+    networks:
+      - ecommerce-net
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: apps/order_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    ports:
+      - '8003:8003'
+    depends_on:
+      - postgres-primary
+      - rabbitmq
+      - valkey
+    networks:
+      - ecommerce-net
+
+  payment-service:
+    build:
+      context: ..
+      dockerfile: apps/payment_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    ports:
+      - '8004:8004'
+    depends_on:
+      - postgres-primary
+      - rabbitmq
+      - valkey
+    networks:
+      - ecommerce-net
+
+  payment-worker:
+    build:
+      context: ..
+      dockerfile: apps/payment_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    command: ['uv', 'run', 'python', '-m', 'apps.payment_service.workers.payment_worker']
+    depends_on:
+      - postgres-primary
+      - rabbitmq
+      - valkey
+    networks:
+      - ecommerce-net
+
+  order-payment-result-worker:
+    build:
+      context: ..
+      dockerfile: apps/order_service/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    command: ['uv', 'run', 'python', '-m', 'apps.order_service.workers.payment_result_worker']
+    depends_on:
+      - postgres-primary
+      - rabbitmq
+      - valkey
+    networks:
+      - ecommerce-net
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: apps/api_gateway/Dockerfile
+    profiles:
+      - services
+    env_file:
+      - ../.env
+    ports:
+      - '8000:8000'
+    depends_on:
+      - auth-service
+      - product-service
+      - cart-service
+      - order-service
+      - payment-service
     networks:
       - ecommerce-net
 

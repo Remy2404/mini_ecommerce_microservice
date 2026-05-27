@@ -5,9 +5,12 @@ from fastapi.responses import JSONResponse
 from packages.config.settings import settings
 
 SERVICE_MAP = {
+    "auth": "auth_service_url",
+    "categories": "product_service_url",
     "products": "product_service_url",
     "cart": "cart_service_url",
     "orders": "order_service_url",
+    "payments": "payment_service_url",
 }
 
 HOP_BY_HOP_HEADERS = {

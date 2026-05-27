@@ -9,4 +9,4 @@ RUN uv sync --frozen --no-dev
 COPY packages ./packages
 COPY apps ./apps
 
-CMD ["uv", "run", "python", "-m", "apps.payment_service.workers.payment_worker"]
+CMD ["uv", "run", "uvicorn", "apps.payment_service.app.main:app", "--host", "0.0.0.0", "--port", "8004"]

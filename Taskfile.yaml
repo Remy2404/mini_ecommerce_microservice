@@ -5,6 +5,7 @@ vars:
   COMPOSE_FILE: infra/docker-compose.yml
 
   API_GATEWAY_PORT: 8000
+  AUTH_SERVICE_PORT: 8005
   PRODUCT_SERVICE_PORT: 8001
   CART_SERVICE_PORT: 8002
   ORDER_SERVICE_PORT: 8003
@@ -13,6 +14,7 @@ vars:
   POSTGRES_CONTAINER: ecommerce-postgres-primary
 
   POSTGRES_USER: ecommerce
+  AUTH_DB: auth_db
   PRODUCTS_DB: products_db
   ORDERS_DB: orders_db
   PAYMENTS_DB: payments_db
@@ -82,6 +84,7 @@ tasks:
     desc: Check service ports on Windows
     cmds:
       - cmd /c "netstat -ano | findstr :{{.API_GATEWAY_PORT}} || exit /b 0"
+      - cmd /c "netstat -ano | findstr :{{.AUTH_SERVICE_PORT}} || exit /b 0"
       - cmd /c "netstat -ano | findstr :{{.PRODUCT_SERVICE_PORT}} || exit /b 0"
       - cmd /c "netstat -ano | findstr :{{.CART_SERVICE_PORT}} || exit /b 0"
       - cmd /c "netstat -ano | findstr :{{.ORDER_SERVICE_PORT}} || exit /b 0"
@@ -90,6 +93,7 @@ tasks:
     desc: Check all HTTP service health endpoints
     cmds:
       - curl.exe -s http://localhost:{{.API_GATEWAY_PORT}}/health || true
+      - curl.exe -s http://localhost:{{.AUTH_SERVICE_PORT}}/health || true
       - curl.exe -s http://localhost:{{.PRODUCT_SERVICE_PORT}}/health || true
       - curl.exe -s http://localhost:{{.CART_SERVICE_PORT}}/health || true
       - curl.exe -s http://localhost:{{.ORDER_SERVICE_PORT}}/health || true
@@ -112,6 +116,12 @@ tasks:
     cmds:
       - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.API_GATEWAY_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'API Gateway already running on port {{.API_GATEWAY_PORT}}. Not starting duplicate.'; exit 0 }"
       - uv run uvicorn apps.api_gateway.app.main:app --reload --port {{.API_GATEWAY_PORT}}
+
+  run:auth:
+    desc: Run Auth Service only if port 8005 is free
+    cmds:
+      - powershell -NoProfile -Command "if ((Get-NetTCPConnection -LocalPort {{.AUTH_SERVICE_PORT}} -ErrorAction SilentlyContinue)) { Write-Host 'Auth Service already running on port {{.AUTH_SERVICE_PORT}}. Not starting duplicate.'; exit 0 }"
+      - uv run uvicorn apps.auth_service.app.main:app --reload --port {{.AUTH_SERVICE_PORT}}
 
   run:product:
     desc: Run Product Service only if port 8001 is free
@@ -195,11 +205,13 @@ tasks:
       - curl.exe -s http://localhost:{{.CART_SERVICE_PORT}}/metrics/ | findstr http_request || true
       - curl.exe -s http://localhost:{{.ORDER_SERVICE_PORT}}/metrics/ | findstr http_request || true
       - curl.exe -s http://localhost:{{.API_GATEWAY_PORT}}/metrics/ | findstr http_request || true
+      - curl.exe -s http://localhost:{{.AUTH_SERVICE_PORT}}/metrics/ | findstr http_request || true
 
   urls:
     desc: Print useful local URLs
     cmds:
       - echo "API Gateway    http://localhost:8000/docs"
+      - echo "Auth API        http://localhost:8005/docs"
       - echo "Product API     http://localhost:8001/docs"
       - echo "Cart API        http://localhost:8002/docs"
       - echo "Order API       http://localhost:8003/docs"
@@ -214,8 +226,9 @@ tasks:
   # -----------------------------
 
   db:check:
-    desc: Check products_db, orders_db, and payments_db connectivity
+    desc: Check auth_db, products_db, orders_db, and payments_db connectivity
     cmds:
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.AUTH_DB}} -c "SELECT 1;"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PRODUCTS_DB}} -c "SELECT 1;"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.ORDERS_DB}} -c "SELECT 1;"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PAYMENTS_DB}} -c "SELECT 1;"
@@ -239,6 +252,7 @@ tasks:
     desc: Show tables in all service databases
     cmds:
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PRODUCTS_DB}} -c "\dt"
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.AUTH_DB}} -c "\dt"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.ORDERS_DB}} -c "\dt"
       - docker exec {{.POSTGRES_CONTAINER}} psql -U {{.POSTGRES_USER}} -d {{.PAYMENTS_DB}} -c "\dt"
 

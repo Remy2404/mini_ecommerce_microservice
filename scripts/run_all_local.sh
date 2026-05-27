@@ -33,11 +33,13 @@ start_command() {
 
 trap cleanup EXIT INT TERM
 
+start_service "auth service" "run_auth_service.sh"
 start_service "product service" "run_product_service.sh"
 start_service "cart service" "run_cart_service.sh"
 start_service "order service" "run_order_service.sh"
+start_service "payment api service" "run_payment_api_service.sh"
 start_command "order consumer" uv run python -m apps.order_service.workers.payment_result_worker
-start_service "payment service" "run_payment_service.sh"
+start_service "payment worker" "run_payment_service.sh"
 start_service "api gateway" "run_api_gateway.sh"
 
 wait -n "${pids[@]}"

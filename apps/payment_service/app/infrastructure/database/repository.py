@@ -1,12 +1,14 @@
-"""Payment repository."""
+"""Payment repository using SQLAlchemy async ORM."""
 
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import text
+from sqlalchemy import select
 
+from apps.payment_service.app.infrastructure.database.models import Payment
+from apps.payment_service.app.schemas.responses import PaymentResponse
 from packages.config.settings import settings
-from packages.database.session import transaction
+from packages.database.session import session_scope
 
 
 async def save_payment(
@@ -20,47 +22,44 @@ async def save_payment(
     failure_reason: str | None,
     correlation_id: str,
 ) -> None:
-    async with transaction(settings.payments_database_url) as connection:
-        await connection.execute(
-            text(
-                """
-                INSERT INTO payments (
-                    id,
-                    order_id,
-                    user_id,
-                    status,
-                    amount,
-                    currency,
-                    failure_reason,
-                    correlation_id
+    async with session_scope(settings.payments_database_url) as session:
+        payment = await session.get(Payment, payment_id)
+        if payment is None:
+            session.add(
+                Payment(
+                    id=payment_id,
+                    order_id=order_id,
+                    user_id=user_id,
+                    status=str(status),
+                    amount=amount,
+                    currency=currency,
+                    failure_reason=failure_reason,
+                    correlation_id=correlation_id,
                 )
-                VALUES (
-                    :id,
-                    :order_id,
-                    :user_id,
-                    :status,
-                    :amount,
-                    :currency,
-                    :failure_reason,
-                    :correlation_id
-                )
-                ON CONFLICT (id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    amount = EXCLUDED.amount,
-                    currency = EXCLUDED.currency,
-                    failure_reason = EXCLUDED.failure_reason,
-                    correlation_id = EXCLUDED.correlation_id,
-                    updated_at = CURRENT_TIMESTAMP
-                """
-            ),
-            {
-                "id": payment_id,
-                "order_id": order_id,
-                "user_id": user_id,
-                "status": str(status),
-                "amount": amount,
-                "currency": currency,
-                "failure_reason": failure_reason,
-                "correlation_id": correlation_id,
-            },
-        )
+            )
+            return
+
+        payment.status = str(status)
+        payment.amount = amount
+        payment.currency = currency
+        payment.failure_reason = failure_reason
+        payment.correlation_id = correlation_id
+
+
+async def get_payment(payment_id: UUID) -> PaymentResponse | None:
+    async with session_scope(settings.payments_database_url) as session:
+        result = await session.execute(select(Payment).where(Payment.id == payment_id))
+        payment = result.scalar_one_or_none()
+
+    if payment is None:
+        return None
+
+    return PaymentResponse(
+        payment_id=payment.id,
+        order_id=payment.order_id,
+        user_id=payment.user_id,
+        status=payment.status,
+        amount=payment.amount,
+        currency=payment.currency,
+        failure_reason=payment.failure_reason,
+    )

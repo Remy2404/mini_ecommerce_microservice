@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,9 +60,11 @@ class Settings(BaseSettings):
     products_database_name: str = Field(..., validation_alias="PRODUCTS_DATABASE_NAME")
     orders_database_name: str = Field(..., validation_alias="ORDERS_DATABASE_NAME")
     payments_database_name: str = Field(..., validation_alias="PAYMENTS_DATABASE_NAME")
+    auth_database_name: str = Field("auth_db", validation_alias="AUTH_DATABASE_NAME")
     products_database_url: str = Field(..., validation_alias="PRODUCTS_DATABASE_URL")
     orders_database_url: str = Field(..., validation_alias="ORDERS_DATABASE_URL")
     payments_database_url: str = Field(..., validation_alias="PAYMENTS_DATABASE_URL")
+    auth_database_url: str = Field("", validation_alias="AUTH_DATABASE_URL")
 
     # Valkey settings
     valkey_host: str = Field(..., validation_alias="VALKEY_HOST")
@@ -91,6 +93,7 @@ class Settings(BaseSettings):
     api_gateway_service_name: str = Field(
         ..., validation_alias="API_GATEWAY_SERVICE_NAME"
     )
+    auth_service_name: str = Field("auth-service", validation_alias="AUTH_SERVICE_NAME")
     product_service_name: str = Field(..., validation_alias="PRODUCT_SERVICE_NAME")
     cart_service_name: str = Field(..., validation_alias="CART_SERVICE_NAME")
     order_service_name: str = Field(..., validation_alias="ORDER_SERVICE_NAME")
@@ -98,6 +101,7 @@ class Settings(BaseSettings):
 
     # service port
     api_gateway_port: int = Field(..., validation_alias="API_GATEWAY_PORT")
+    auth_service_port: int = Field(8005, validation_alias="AUTH_SERVICE_PORT")
     product_service_port: int = Field(..., validation_alias="PRODUCT_SERVICE_PORT")
     cart_service_port: int = Field(..., validation_alias="CART_SERVICE_PORT")
     order_service_port: int = Field(..., validation_alias="ORDER_SERVICE_PORT")
@@ -106,6 +110,10 @@ class Settings(BaseSettings):
     # Internal Service URLs
 
     product_service_url: str = Field(..., validation_alias="PRODUCT_SERVICE_URL")
+    auth_service_url: str = Field(
+        "http://localhost:8005",
+        validation_alias="AUTH_SERVICE_URL",
+    )
     cart_service_url: str = Field(..., validation_alias="CART_SERVICE_URL")
     order_service_url: str = Field(..., validation_alias="ORDER_SERVICE_URL")
     payment_service_url: str = Field(..., validation_alias="PAYMENT_SERVICE_URL")
@@ -132,6 +140,7 @@ class Settings(BaseSettings):
 
     # jwt settings
     jwt_algorithm: str = Field(..., validation_alias="JWT_ALGORITHM")
+    jwt_secret_key: SecretStr = Field("", validation_alias="JWT_SECRET_KEY")
     access_token_expire_minutes: int = Field(
         ..., validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
     )

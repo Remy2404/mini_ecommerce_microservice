@@ -20,6 +20,10 @@ from packages.observability.metrics import (
     rabbitmq_message_published_total,
 )
 from packages.observability.tracing import add_span_attributes, setup_tracing
+from apps.payment_service.app.application.services import process_fake_payment
+from apps.payment_service.app.infrastructure.cache.idempotency import (
+    acquire_payment_event_lock,
+)
 from apps.payment_service.app.infrastructure.database.repository import save_payment
 
 setup_logging(settings.payment_service_name)
@@ -33,6 +37,15 @@ logger = get_logger(__name__)
     exchange=ecommerce_exchange,
 )
 async def process_payment(event: OrderCreatedEvent) -> None:
+    lock_acquired = await acquire_payment_event_lock(event.event_id)
+    if not lock_acquired:
+        logger.info(
+            "Duplicate order.created event skipped",
+            event_id=event.event_id,
+            order_id=str(event.payload.order_id),
+        )
+        return
+
     rabbitmq_message_consumed_total.labels(
         service_name=settings.payment_service_name,
         routing_key=RoutingKey.ORDER_CREATED,
@@ -52,7 +65,11 @@ async def process_payment(event: OrderCreatedEvent) -> None:
         )
     )
 
-    is_success = random.random() <= settings.payment_success_rate
+    decision = process_fake_payment(
+        amount=event.payload.amount,
+        random_value=random.random(),
+    )
+    is_success = decision.succeeded
 
     add_span_attributes(
         {
@@ -121,7 +138,7 @@ async def process_payment(event: OrderCreatedEvent) -> None:
             user_id=event.payload.user_id,
             amount=event.payload.amount,
             currency=event.payload.currency,
-            reason="Simulated payment failure",
+            reason=decision.failure_reason or "Payment failed",
         ),
     )
 

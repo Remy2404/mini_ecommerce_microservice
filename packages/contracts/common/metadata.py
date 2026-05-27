@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field
 
 
 class EventType(StrEnum):
-    ORDER_CREATED = "order.created"
-    PAYMENT_SUCCESS = "payment.success"
-    PAYMENT_FAILED = "payment.failed"
-    ORDER_CONFIRMED = "order.confirmed"
-    ORDER_CANCELLED = "order.cancelled"
-    CART_RESTORED = "cart.restored"
+    ORDER_CREATED = "order.created.v1"
+    PAYMENT_SUCCESS = "payment.succeeded.v1"
+    PAYMENT_FAILED = "payment.failed.v1"
+    ORDER_CONFIRMED = "order.confirmed.v1"
+    ORDER_CANCELLED = "order.cancelled.v1"
+    CART_RESTORED = "cart.restored.v1"
 
 
 class BaseEvent(BaseModel):
