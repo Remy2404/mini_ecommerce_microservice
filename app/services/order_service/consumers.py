@@ -9,7 +9,7 @@ from packages.observability.logging import get_logger, setup_logging
 from packages.observability.metrics import order_cancelled_total, order_confirmed_total
 from packages.observability.tracing import add_span_attributes, setup_tracing
 from packages.cache.valkey_client import get_valkey_client
-from services.order_service.state import save_order_status
+from app.services.order_service.state import save_order_status
 
 setup_logging(settings.order_service_name)
 setup_tracing(settings.order_service_name)

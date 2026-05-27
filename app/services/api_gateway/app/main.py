@@ -4,13 +4,13 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from packages.config.settings import settings
 from packages.observability.http_metrics import HTTPMetricsMiddleware
 from packages.observability.logging import setup_logging
-from services.api_gateway.app.middleware.error_handler import ErrorHandlerMiddleware
-from services.api_gateway.app.middleware.logging import LoggingMiddleware
-from services.api_gateway.app.routers.auth_routes import router as auth_routes_router
-from services.api_gateway.app.routers.gateway_routes import (
+from app.services.api_gateway.app.middleware.error_handler import ErrorHandlerMiddleware
+from app.services.api_gateway.app.middleware.logging import LoggingMiddleware
+from app.services.api_gateway.app.routers.auth_routes import router as auth_routes_router
+from app.services.api_gateway.app.routers.gateway_routes import (
     router as gateway_routes_router,
 )
-from services.api_gateway.app.routers.proxy import router
+from app.services.api_gateway.app.routers.proxy import router
 
 setup_logging(settings.api_gateway_service_name)
 

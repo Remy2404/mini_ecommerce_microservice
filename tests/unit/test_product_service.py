@@ -4,8 +4,8 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.product_service.main import app
-from services.product_service.schemas import ProductResponse
+from app.services.product_service.main import app
+from app.services.product_service.schemas import ProductResponse
 
 
 def test_health_endpoint_returns_ok() -> None:

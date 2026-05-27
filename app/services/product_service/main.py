@@ -5,7 +5,7 @@ from packages.config.settings import settings
 from packages.observability.http_metrics import HTTPMetricsMiddleware
 from packages.observability.logging import setup_logging
 from packages.observability.tracing import setup_tracing
-from services.product_service.router import router as product_router
+from app.services.product_service.router import router as product_router
 
 app = FastAPI(
     title="Product Service",

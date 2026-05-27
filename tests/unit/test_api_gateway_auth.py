@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
 from packages.config.settings import settings
-from services.api_gateway.app.dependencies import auth
+from app.services.api_gateway.app.dependencies import auth
 
 
 class FakeAsyncClient:

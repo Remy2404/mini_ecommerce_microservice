@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from packages.contracts.events import OrderCreatedEvent, OrderCreatedPayload
-from services.payment_service.consumers import process_payment
+from app.services.payment_service.consumers import process_payment
 
 
 def _order_created_event() -> OrderCreatedEvent:

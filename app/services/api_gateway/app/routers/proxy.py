@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from packages.config.settings import settings
-from services.api_gateway.app.dependencies.auth import validate_token
-from services.api_gateway.app.dependencies.rate_limit import rate_limit
+from app.services.api_gateway.app.dependencies.auth import validate_token
+from app.services.api_gateway.app.dependencies.rate_limit import rate_limit
 
 router = APIRouter()
 

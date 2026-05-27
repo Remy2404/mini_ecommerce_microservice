@@ -5,13 +5,13 @@ from packages.config.settings import settings
 from packages.observability.http_metrics import HTTPMetricsMiddleware
 from packages.observability.logging import setup_logging
 from packages.observability.tracing import setup_tracing
-from services.cart_service.service import (
+from app.services.cart_service.service import (
     add_item_to_cart,
     delete_cart,
     delete_cart_item,
     find_cart,
 )
-from services.cart_service.router import router as cart_router
+from app.services.cart_service.router import router as cart_router
 
 app = FastAPI(
     title="Cart Service",

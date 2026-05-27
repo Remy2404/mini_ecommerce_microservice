@@ -7,13 +7,13 @@ from pydantic import ValidationError
 
 from packages.config.settings import settings
 from packages.contracts.schemas import ApiResponse, ProductResponse
-from services.cart_service.repository import (
+from app.services.cart_service.repository import (
     clear_cart,
     get_cart,
     remove_cart_item,
     save_cart,
 )
-from services.cart_service.schemas import (
+from app.services.cart_service.schemas import (
     AddCartItemRequest,
     CartItemResponse,
     CartResponse,

@@ -8,8 +8,8 @@ from packages.config.settings import settings
 from packages.contracts.schemas import ApiResponse
 from packages.observability.logging import get_logger
 from packages.observability.tracing import add_span_attributes
-from services.cart_service import service as cart_service
-from services.cart_service.schemas import AddCartItemRequest, CartResponse
+from app.services.cart_service import service as cart_service
+from app.services.cart_service.schemas import AddCartItemRequest, CartResponse
 
 router = APIRouter()
 

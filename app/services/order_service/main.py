@@ -8,7 +8,7 @@ from packages.messaging.broker import broker
 from packages.observability.logging import get_logger, setup_logging
 from packages.observability.http_metrics import HTTPMetricsMiddleware
 from packages.observability.tracing import setup_tracing
-from services.order_service.router import router as order_router
+from app.services.order_service.router import router as order_router
 
 app = FastAPI(
     title="Order Service",

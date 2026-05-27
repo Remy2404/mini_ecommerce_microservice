@@ -15,14 +15,14 @@ from packages.observability.metrics import (
     rabbitmq_message_published_total,
 )
 from packages.observability.tracing import add_span_attributes
-from services.order_service.cart_reader import (
+from app.services.order_service.cart_reader import (
     CartNotFoundError,
     EmptyCartError,
     get_cart_snapshot,
 )
-from services.order_service.repository import save_order
-from services.order_service.schemas import CreateOrderRequest
-from services.order_service.state import (
+from app.services.order_service.repository import save_order
+from app.services.order_service.schemas import CreateOrderRequest
+from app.services.order_service.state import (
     get_all_orders,
     get_order_status,
     save_order_status,

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from packages.cache.valkey_client import get_valkey_client
 from packages.config.settings import settings
-from services.cart_service.schemas import CartItemResponse, CartResponse
+from app.services.cart_service.schemas import CartItemResponse, CartResponse
 
 CART_KEY_PREFIX = "cart"
 

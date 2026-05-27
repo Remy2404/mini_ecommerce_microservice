@@ -8,8 +8,8 @@ from packages.config.settings import settings
 from packages.contracts.schemas import ApiResponse
 from packages.observability.logging import get_logger
 from packages.observability.tracing import add_span_attributes
-from services.product_service.schemas import CreateProductRequest, ProductResponse
-from services.product_service.service import create_product, find_product, find_products
+from app.services.product_service.schemas import CreateProductRequest, ProductResponse
+from app.services.product_service.service import create_product, find_product, find_products
 
 router = APIRouter()
 

@@ -5,7 +5,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.order_service.main import app
+from app.services.order_service.main import app
 
 
 def test_health_endpoint_returns_ok() -> None:
@@ -24,7 +24,7 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_create_order_endpoint_returns_created_order() -> None:
-    from services.order_service.cart_reader import CartSnapshot
+    from app.services.order_service.cart_reader import CartSnapshot
 
     with (
         patch("services.order_service.main.broker.connect", new=AsyncMock()),
@@ -75,7 +75,7 @@ def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_save_status
 ) -> None:
     from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
-    from services.order_service.consumers import handle_payment_result
+    from app.services.order_service.consumers import handle_payment_result
     import asyncio
 
     event = PaymentSuccessEvent(
@@ -100,7 +100,7 @@ def test_handle_payment_success_clears_cart(
 
 
 def test_create_order_cart_not_found() -> None:
-    from services.order_service.cart_reader import CartNotFoundError
+    from app.services.order_service.cart_reader import CartNotFoundError
 
     with (
         patch("services.order_service.main.broker.connect", new=AsyncMock()),
@@ -122,7 +122,7 @@ def test_create_order_cart_not_found() -> None:
 
 
 def test_create_order_cart_empty() -> None:
-    from services.order_service.cart_reader import EmptyCartError
+    from app.services.order_service.cart_reader import EmptyCartError
 
     with (
         patch("services.order_service.main.broker.connect", new=AsyncMock()),

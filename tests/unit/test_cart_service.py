@@ -5,9 +5,9 @@ import httpx
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.cart_service import service as cart_service
-from services.cart_service.main import app
-from services.cart_service.schemas import CartItemResponse, CartResponse
+from app.services.cart_service import service as cart_service
+from app.services.cart_service.main import app
+from app.services.cart_service.schemas import CartItemResponse, CartResponse
 
 PRODUCT_ID = uuid4()
 

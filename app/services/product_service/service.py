@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 
-from services.product_service.repository import get_product, list_products, save_product
-from services.product_service.schemas import CreateProductRequest, ProductResponse
+from app.services.product_service.repository import get_product, list_products, save_product
+from app.services.product_service.schemas import CreateProductRequest, ProductResponse
 
 
 async def create_product(request: CreateProductRequest) -> ProductResponse:

@@ -20,7 +20,7 @@ from packages.observability.metrics import (
     rabbitmq_message_published_total,
 )
 from packages.observability.tracing import add_span_attributes, setup_tracing
-from services.payment_service.repository import save_payment
+from app.services.payment_service.repository import save_payment
 
 setup_logging(settings.payment_service_name)
 setup_tracing(settings.payment_service_name)

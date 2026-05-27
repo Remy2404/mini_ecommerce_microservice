@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from packages.config.settings import settings
 from packages.database.session import connect, transaction
-from services.order_service.cart_reader import CartSnapshotItem
+from app.services.order_service.cart_reader import CartSnapshotItem
 
 
 async def save_order(

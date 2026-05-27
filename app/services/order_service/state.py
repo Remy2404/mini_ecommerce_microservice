@@ -1,7 +1,7 @@
 import json
 from uuid import UUID
 
-from services.order_service.repository import (
+from app.services.order_service.repository import (
     clear_orders,
     get_order_status_by_id,
     list_order_statuses,

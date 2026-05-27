@@ -4,8 +4,8 @@ import httpx
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.api_gateway.app.main import app
-from services.api_gateway.app.routers import proxy
+from app.services.api_gateway.app.main import app
+from app.services.api_gateway.app.routers import proxy
 
 
 class FakeAsyncClient:

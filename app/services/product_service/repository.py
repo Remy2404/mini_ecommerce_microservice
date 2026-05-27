@@ -4,7 +4,7 @@ from sqlalchemy import text
 
 from packages.config.settings import settings
 from packages.database.session import connect, transaction
-from services.product_service.schemas import ProductResponse
+from app.services.product_service.schemas import ProductResponse
 
 
 PRODUCT_COLUMNS = """
