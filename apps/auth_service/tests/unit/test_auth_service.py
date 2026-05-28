@@ -6,9 +6,7 @@ from pydantic import SecretStr
 from apps.auth_service.app.application.services import AuthService
 from apps.auth_service.app.main import app
 from apps.auth_service.app.schemas.requests import LoginRequest, RegisterUserRequest
-from apps.auth_service.app.schemas.responses import AuthTokenResponse, UserProfileResponse
-from packages.config.settings import settings
-from packages.security.jwt import decode_access_token
+from apps.auth_service.app.schemas.responses import UserProfileResponse
 from packages.security.passwords import hash_password, verify_password
 
 
@@ -59,8 +57,7 @@ def test_password_hash_is_verifiable_and_not_plaintext() -> None:
     assert not verify_password("wrong password", password_hash)
 
 
-def test_register_and_login_issue_jwt(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "jwt_secret_key", SecretStr("x" * 32))
+def test_register_and_login_validate_credentials_only() -> None:
     repository = FakeAuthRepository()
     service = AuthService(repository=repository)
 
@@ -75,16 +72,14 @@ def test_register_and_login_issue_jwt(monkeypatch) -> None:
             )
         )
     )
-    token = asyncio.run(
+    login_result = asyncio.run(
         service.login_user(
             LoginRequest(email="ramy@example.com", password=SecretStr("strong-password"))
         )
     )
 
-    payload = decode_access_token(token.access_token)
     assert registered.email == "ramy@example.com"
-    assert payload["sub"] == str(registered.user_id)
-    assert payload["roles"] == ["customer"]
+    assert login_result is None
 
 
 def test_auth_routes_return_stable_envelope(monkeypatch) -> None:
@@ -96,14 +91,12 @@ def test_auth_routes_return_stable_envelope(monkeypatch) -> None:
         is_active=True,
         roles=["customer"],
     )
-    token = AuthTokenResponse(access_token="token", user=user)
-
     class FakeService:
         async def register_user(self, request):
             return user
 
         async def login_user(self, request):
-            return token
+            return None
 
     from apps.auth_service.app.api.routes import get_auth_service
 
@@ -127,5 +120,5 @@ def test_auth_routes_return_stable_envelope(monkeypatch) -> None:
 
     assert register_response.status_code == 201
     assert register_response.json()["data"]["email"] == "ramy@example.com"
-    assert login_response.status_code == 200
-    assert login_response.json()["data"]["access_token"] == "token"
+    assert login_response.status_code == 410
+    assert "WSO2" in login_response.json()["detail"]

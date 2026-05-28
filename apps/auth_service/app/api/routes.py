@@ -22,7 +22,6 @@ from apps.auth_service.app.schemas.requests import (
 )
 from apps.auth_service.app.schemas.responses import (
     AddressResponse,
-    AuthTokenResponse,
     RoleResponse,
     UserProfileResponse,
 )
@@ -58,13 +57,19 @@ async def register_user(
 async def login_user(
     request: LoginRequest,
     service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[AuthTokenResponse]:
+) -> ApiResponse[dict[str, str]]:
     try:
-        token = await service.login_user(request)
+        await service.login_user(request)
     except InvalidCredentialsError as exc:
         raise HTTPException(status_code=401, detail="Invalid credentials") from exc
 
-    return ApiResponse(success=True, message="Login successful", data=token)
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail=(
+            "Auth Service local login is removed. "
+            "Use API Gateway /auth/login with WSO2 instead."
+        ),
+    )
 
 
 @router.get("/auth/me")

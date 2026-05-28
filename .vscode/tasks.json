@@ -1,0 +1,40 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "install-cryptography",
+			"type": "shell",
+			"command": ".\\.venv\\Scripts\\python.exe",
+			"args": [
+				"-m",
+				"pip",
+				"install",
+				"cryptography"
+			]
+		},
+		{
+			"label": "pytest-certificate-validator",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"tests/unit/test_certificate_validator.py",
+				"-q"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "ruff-check-all",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"ruff",
+				"check",
+				"."
+			],
+			"isBackground": false
+		}
+	]
+}

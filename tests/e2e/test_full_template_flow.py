@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
+from apps.api_gateway.app.infrastructure.security import wso2_client
 from apps.api_gateway.app.main import app as gateway_app
 from apps.auth_service.app.application.services import AuthService
 from apps.auth_service.app.schemas.requests import LoginRequest, RegisterUserRequest
@@ -26,8 +27,6 @@ from packages.contracts.events import (
     PaymentSuccessEvent,
     PaymentSuccessPayload,
 )
-from packages.security.jwt import create_access_token
-from packages.security.passwords import hash_password
 
 
 class FakeAuthRepository:
@@ -88,7 +87,6 @@ class FakeGatewayAsyncClient:
 
 
 def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "jwt_secret_key", SecretStr("x" * 32))
     auth_service = AuthService(repository=FakeAuthRepository())
 
     registered = asyncio.run(
@@ -157,7 +155,7 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
 
     order = asyncio.run(order_services.create_order_for_user(str(registered.user_id)))
 
-    assert login.access_token
+    assert login is None
     assert saved_carts[0].items[0].unit_price == Decimal("15.00")
     assert saved_carts[0].total_amount == Decimal("30.00")
     assert order.status == "PENDING"
@@ -284,19 +282,20 @@ def test_e2e_payment_worker_persists_outbox_and_publishes(monkeypatch) -> None:
 
 
 def test_e2e_gateway_route_metrics_and_auth(monkeypatch) -> None:
+    async def fake_introspection(token: str) -> dict:
+        return {"sub": "user_123", "roles": ["customer"], "active": True}
+
     FakeGatewayAsyncClient.calls = []
     monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeGatewayAsyncClient)
+    monkeypatch.setattr(wso2_client, "introspect_access_token", fake_introspection)
     monkeypatch.setattr(settings, "gateway_auth_enabled", True)
     monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
-    monkeypatch.setattr(settings, "jwt_secret_key", SecretStr("x" * 32))
     monkeypatch.setattr(settings, "product_service_url", "http://product-service")
-
-    token = create_access_token(subject="user_123", roles=["customer"])
 
     with TestClient(gateway_app) as client:
         protected = client.get(
             "/api/v1/products",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": "Bearer opaque-token"},
         )
         metrics = client.get("/metrics")
 

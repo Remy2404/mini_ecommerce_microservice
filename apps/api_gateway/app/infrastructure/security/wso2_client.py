@@ -5,8 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
 from packages.config.settings import settings
-from packages.errors.exceptions import UnauthorizedError
-from packages.security.jwt import decode_access_token
+from packages.security.jwt_validator import AuthProviderUnavailableError, TokenValidationError
 
 bearer_scheme = HTTPBearer(auto_error=False)
 _jwks_cache: dict = {}
@@ -35,10 +34,7 @@ async def get_jwks() -> dict:
                 response = await client.get(settings.wso2_jwks_url)
                 response.raise_for_status()
             except httpx.HTTPError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Authentication service unavailable",
-                ) from exc
+                raise AuthProviderUnavailableError("Unable to fetch WSO2 JWKS") from exc
 
             _jwks_cache = response.json()
     return _jwks_cache
@@ -61,43 +57,37 @@ async def introspect_access_token(token: str) -> dict:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
     except httpx.HTTPError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service unavailable",
-        ) from exc
+        raise AuthProviderUnavailableError("Unable to introspect access token") from exc
 
     if response.status_code >= 500:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service unavailable",
-        )
+        raise AuthProviderUnavailableError("WSO2 introspection endpoint is unavailable")
 
     if response.status_code >= 400:
-        raise _invalid_token()
+        raise TokenValidationError("Invalid token")
 
     try:
         payload = response.json()
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service unavailable",
-        ) from exc
+        raise AuthProviderUnavailableError("Invalid introspection response") from exc
 
     if not isinstance(payload, dict) or payload.get("active") is not True:
-        raise _invalid_token()
+        raise TokenValidationError("Invalid token")
 
     return payload
 
 
 async def validate_jwt_token(token: str) -> dict:
     jwks = await get_jwks()
-    return jwt.decode(
-        token,
-        jwks,
-        algorithms=[settings.jwt_algorithm],
-        audience=settings.wso2_audience,
-        issuer=settings.wso2_issuer,
-    )
+    try:
+        return jwt.decode(
+            token,
+            jwks,
+            algorithms=[settings.jwt_algorithm],
+            audience=settings.wso2_audience,
+            issuer=settings.wso2_issuer,
+        )
+    except JWTError as exc:
+        raise TokenValidationError("Invalid token") from exc
 
 
 async def validate_token(
@@ -115,22 +105,13 @@ async def validate_token(
     token = credentials.credentials
     try:
         if _is_jwt_token(token):
-            try:
-                token_header = jwt.get_unverified_header(token)
-            except JWTError as exc:
-                raise _invalid_token() from exc
-
-            if (
-                token_header.get("alg") == "HS256"
-                and settings.jwt_secret_key.get_secret_value()
-            ):
-                try:
-                    return decode_access_token(token)
-                except UnauthorizedError as exc:
-                    raise _invalid_token() from exc
-
             return await validate_jwt_token(token)
 
         return await introspect_access_token(token)
-    except JWTError as exc:
+    except TokenValidationError as exc:
         raise _invalid_token() from exc
+    except AuthProviderUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable",
+        ) from exc

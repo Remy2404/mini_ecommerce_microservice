@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,11 +36,13 @@ class Settings(BaseSettings):
         "https://localhost:9443/oauth2/token",
         validation_alias="WSO2_ISSUER",
     )
-    wso2_audience: str = Field("mini-ecommerce-api", validation_alias="WSO2_AUDIENCE")
+    wso2_audience: str = Field(
+        validation_alias="WSO2_AUDIENCE"
+    )
     wso2_jwks_url: str = Field(
         "https://localhost:9443/oauth2/jwks",
         validation_alias="WSO2_JWKS_URL",
-    )
+    ) 
     wso2_token_url: str = Field(
         "https://localhost:9443/oauth2/token",
         validation_alias="WSO2_TOKEN_URL",
@@ -140,10 +142,6 @@ class Settings(BaseSettings):
 
     # jwt settings
     jwt_algorithm: str = Field(..., validation_alias="JWT_ALGORITHM")
-    jwt_secret_key: SecretStr = Field("", validation_alias="JWT_SECRET_KEY")
-    access_token_expire_minutes: int = Field(
-        ..., validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
-    )
     cors_allowed_origins: str = Field(..., validation_alias="CORS_ALLOWED_ORIGINS")
     # Certificate Validation
     tls_enabled: bool = Field(..., validation_alias="TLS_ENABLED")

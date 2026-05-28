@@ -6,7 +6,7 @@ tracing.
 
 ## Services
 
-- `apps/auth_service`: users, profiles, addresses, roles, JWT login.
+- `apps/auth_service`: users, profiles, addresses, and roles. Access tokens are issued by WSO2.
 - `apps/product_service`: categories and products in `products_db`.
 - `apps/cart_service`: Valkey cart storage at `cart:{user_id}`.
 - `apps/order_service`: orders and order items in `orders_db`.

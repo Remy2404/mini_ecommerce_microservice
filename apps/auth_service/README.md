@@ -14,5 +14,5 @@ Owns users, profiles, addresses, roles, and user-role assignments in `auth_db`.
 - `POST /auth/users/{user_id}/roles`
 - `GET /auth/users/{user_id}/roles`
 
-Passwords are stored as PBKDF2 hashes. JWT signing uses `JWT_SECRET_KEY` from
-the environment and refuses to issue local JWTs if that secret is missing.
+Passwords are stored as PBKDF2 hashes. Access tokens are issued by WSO2
+through the API Gateway `/auth/login` route.

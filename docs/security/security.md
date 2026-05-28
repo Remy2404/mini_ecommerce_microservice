@@ -7,6 +7,8 @@ The API Gateway can run in two modes:
 - Local development: `GATEWAY_AUTH_ENABLED=false` bypasses JWT validation and returns a local demo principal.
 - Protected mode: `GATEWAY_AUTH_ENABLED=true` requires a Bearer token. JWT bearer tokens are validated against WSO2 Identity Server JWKS, issuer, audience, and algorithm settings. Opaque WSO2 access tokens are validated through the WSO2 introspection endpoint.
 
+WSO2 is the only supported production token issuer for this project.
+
 Production deployments must enable gateway auth and validate WSO2 TLS certificates:
 
 ```env

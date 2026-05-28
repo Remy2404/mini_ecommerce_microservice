@@ -18,11 +18,9 @@ from apps.auth_service.app.schemas.requests import (
 )
 from apps.auth_service.app.schemas.responses import (
     AddressResponse,
-    AuthTokenResponse,
     RoleResponse,
     UserProfileResponse,
 )
-from packages.security.jwt import create_access_token
 from packages.security.passwords import hash_password, verify_password
 
 
@@ -47,25 +45,13 @@ class AuthService:
         await self.repository.assign_role(user_id, "customer")
         return await self.get_user_profile(user_id)
 
-    async def login_user(self, request: LoginRequest) -> AuthTokenResponse:
+    async def login_user(self, request: LoginRequest) -> None:
         user = await self.repository.get_user_by_email(request.email)
         if user is None or not verify_password(
             request.password.get_secret_value(),
             user.password_hash,
         ):
             raise InvalidCredentialsError
-
-        roles = await self.repository.list_roles(user.user_id)
-        access_token = create_access_token(
-            subject=str(user.user_id),
-            roles=[role.name for role in roles],
-            extra_claims={"email": user.email},
-        )
-        return AuthTokenResponse(
-            access_token=access_token,
-            token_type="Bearer",
-            user=await self.get_user_profile(user.user_id),
-        )
 
     async def get_user_profile(self, user_id: UUID) -> UserProfileResponse:
         user = await self.repository.get_user_by_id(user_id)

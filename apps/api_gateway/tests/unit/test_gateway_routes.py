@@ -1,12 +1,10 @@
 import httpx
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 from apps.api_gateway.app.infrastructure.security import wso2_client as auth
 from apps.api_gateway.app.main import app
 from packages.config.settings import settings
-from packages.security.jwt import create_access_token
 
 
 class FakeAsyncClient:
@@ -46,14 +44,17 @@ def test_auth_category_and_payment_routes_proxy(monkeypatch) -> None:
     assert FakeAsyncClient.calls[2]["url"] == "http://payment-service/payments/pay_123"
 
 
-def test_gateway_accepts_local_auth_service_jwt(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "gateway_auth_enabled", True)
-    monkeypatch.setattr(settings, "jwt_secret_key", SecretStr("x" * 32))
+async def _fake_introspection(token: str) -> dict:
+    return {"sub": "user-123", "roles": ["customer"], "active": True}
 
-    token = create_access_token(subject="user-123", roles=["customer"])
+
+def test_gateway_accepts_wso2_opaque_access_token(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "gateway_auth_enabled", True)
+    monkeypatch.setattr(auth, "introspect_access_token", _fake_introspection)
+
     payload = __import__("anyio").run(
         auth.validate_token,
-        type("Credentials", (), {"credentials": token})(),
+        type("Credentials", (), {"credentials": "opaque-token"})(),
     )
 
     assert payload["sub"] == "user-123"
