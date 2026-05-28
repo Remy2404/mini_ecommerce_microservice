@@ -36,6 +36,14 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {}
+    },
+    {
+      "name": "ecommerce.retry.exchange",
+      "vhost": "ecommerce",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
     }
   ],
   "queues": [
@@ -45,7 +53,8 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-dead-letter-exchange": "ecommerce.dlx"
+        "x-dead-letter-exchange": "ecommerce.dlx",
+        "x-dead-letter-routing-key": "dead.order.created.v1"
       }
     },
     {
@@ -54,7 +63,8 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {
-        "x-dead-letter-exchange": "ecommerce.dlx"
+        "x-dead-letter-exchange": "ecommerce.dlx",
+        "x-dead-letter-routing-key": "dead.payment.failed.v1"
       }
     },
     {
@@ -64,6 +74,39 @@
       "auto_delete": false,
       "arguments": {
         "x-dead-letter-exchange": "ecommerce.dlx"
+      }
+    },
+    {
+      "name": "order.created.retry.queue",
+      "vhost": "ecommerce",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "ecommerce.exchange",
+        "x-dead-letter-routing-key": "order.created.v1"
+      }
+    },
+    {
+      "name": "payment.succeeded.retry.queue",
+      "vhost": "ecommerce",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "ecommerce.exchange",
+        "x-dead-letter-routing-key": "payment.succeeded.v1"
+      }
+    },
+    {
+      "name": "payment.failed.retry.queue",
+      "vhost": "ecommerce",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "ecommerce.exchange",
+        "x-dead-letter-routing-key": "payment.failed.v1"
       }
     },
     {
@@ -80,7 +123,7 @@
       "vhost": "ecommerce",
       "destination": "order.created.queue",
       "destination_type": "queue",
-      "routing_key": "order.created",
+      "routing_key": "order.created.v1",
       "arguments": {}
     },
     {
@@ -88,7 +131,7 @@
       "vhost": "ecommerce",
       "destination": "payment.result.queue",
       "destination_type": "queue",
-      "routing_key": "payment.*",
+      "routing_key": "payment.*.v1",
       "arguments": {}
     },
     {
@@ -96,7 +139,7 @@
       "vhost": "ecommerce",
       "destination": "cart.restore.queue",
       "destination_type": "queue",
-      "routing_key": "cart.restored",
+      "routing_key": "cart.restored.v1",
       "arguments": {}
     },
     {
@@ -105,6 +148,30 @@
       "destination": "ecommerce.dead-letter.queue",
       "destination_type": "queue",
       "routing_key": "#",
+      "arguments": {}
+    },
+    {
+      "source": "ecommerce.retry.exchange",
+      "vhost": "ecommerce",
+      "destination": "order.created.retry.queue",
+      "destination_type": "queue",
+      "routing_key": "order.created.retry.v1",
+      "arguments": {}
+    },
+    {
+      "source": "ecommerce.retry.exchange",
+      "vhost": "ecommerce",
+      "destination": "payment.succeeded.retry.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.succeeded.retry.v1",
+      "arguments": {}
+    },
+    {
+      "source": "ecommerce.retry.exchange",
+      "vhost": "ecommerce",
+      "destination": "payment.failed.retry.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.failed.retry.v1",
       "arguments": {}
     }
   ]

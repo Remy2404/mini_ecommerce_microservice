@@ -1,0 +1,12 @@
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+WORKDIR /workspace
+ENV PYTHONUNBUFFERED=1
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+COPY packages ./packages
+COPY apps ./apps
+
+CMD ["uv", "run", "uvicorn", "apps.payment_service.app.main:app", "--host", "0.0.0.0", "--port", "8004"]

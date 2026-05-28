@@ -1,15 +1,21 @@
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.order_service.main import app
+from apps.order_service.app.application import services as order_services
+from apps.order_service.app.main import app
 
 
 def test_health_endpoint_returns_ok() -> None:
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
     ):
         with TestClient(app) as client:
             response = client.get("/health")
@@ -19,18 +25,32 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_create_order_endpoint_returns_created_order() -> None:
-    from decimal import Decimal
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
-    ), patch(
-        "services.order_service.main.broker.publish",
-        new=AsyncMock(),
-    ) as publish_mock, patch(
-        "services.order_service.main.get_cart_total_amount",
-        return_value=Decimal("150.00"),
-    ), patch(
-        "services.order_service.main.save_order_status",
+    from apps.order_service.app.infrastructure.clients.cart_client import CartSnapshot
+
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
+        patch(
+            "apps.order_service.app.application.services.publish_pending_order_events",
+            new=AsyncMock(),
+        ) as publish_pending_mock,
+        patch.object(
+            order_services,
+            "get_cart_snapshot",
+            return_value=CartSnapshot(
+                cart_id="cart_user_123",
+                total_amount=Decimal("150.00"),
+                items=[],
+            ),
+        ),
+        patch.object(
+            order_services,
+            "save_order_with_outbox",
+            new=AsyncMock(),
+        ) as save_order_with_outbox_mock,
     ):
         with TestClient(app) as client:
             response = client.post("/orders", json={"user_id": "user_123"})
@@ -42,20 +62,19 @@ def test_create_order_endpoint_returns_created_order() -> None:
     assert body["message"] == "Order created successfully"
     assert body["data"]["order_id"]
     assert body["data"]["status"] == "PENDING"
-    publish_mock.assert_awaited_once()
+    publish_pending_mock.assert_awaited_once()
+    save_order_with_outbox_mock.assert_awaited_once()
 
 
-@patch("services.order_service.consumers.save_order_status")
-@patch("services.order_service.consumers.get_valkey_client")
-@patch("services.order_service.consumers.setup_logging")
-@patch("services.order_service.consumers.setup_tracing")
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.apply_payment_result_once", new_callable=AsyncMock)
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.get_valkey_client")
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_logging")
+@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_tracing")
 def test_handle_payment_success_clears_cart(
-    mock_setup_tracing, mock_setup_logging, mock_valkey, mock_save_status
+    mock_setup_tracing, mock_setup_logging, mock_valkey, mock_apply_result
 ) -> None:
-    from decimal import Decimal
-    from uuid import uuid4
     from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
-    from services.order_service.consumers import handle_payment_result
+    from apps.order_service.app.infrastructure.messaging.payment_result_consumer import handle_payment_result
     import asyncio
 
     event = PaymentSuccessEvent(
@@ -68,25 +87,34 @@ def test_handle_payment_success_clears_cart(
     )
 
     mock_client = mock_valkey.return_value
-    
+    mock_apply_result.return_value = True
+
     # Run the async consumer function in the event loop
     asyncio.run(handle_payment_result(event))
 
-    mock_save_status.assert_called_once_with(
-        order_id=str(event.payload.order_id),
+    mock_apply_result.assert_awaited_once_with(
+        event_id=event.event_id,
+        event_type=event.event_type,
+        order_id=event.payload.order_id,
         status="CONFIRMED",
     )
     mock_client.delete.assert_called_once_with("cart:user_123")
 
 
 def test_create_order_cart_not_found() -> None:
-    from services.order_service.cart_reader import CartNotFoundError
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
-    ), patch(
-        "services.order_service.main.get_cart_total_amount",
-        side_effect=CartNotFoundError("Cart not found"),
+    from apps.order_service.app.infrastructure.clients.cart_client import CartNotFoundError
+
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
+        patch.object(
+            order_services,
+            "get_cart_snapshot",
+            side_effect=CartNotFoundError("Cart not found"),
+        ),
     ):
         with TestClient(app) as client:
             response = client.post("/orders", json={"user_id": "user_123"})
@@ -97,13 +125,19 @@ def test_create_order_cart_not_found() -> None:
 
 
 def test_create_order_cart_empty() -> None:
-    from services.order_service.cart_reader import EmptyCartError
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
-    ), patch(
-        "services.order_service.main.get_cart_total_amount",
-        side_effect=EmptyCartError("Cart is empty"),
+    from apps.order_service.app.infrastructure.clients.cart_client import EmptyCartError
+
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
+        patch.object(
+            order_services,
+            "get_cart_snapshot",
+            side_effect=EmptyCartError("Cart is empty"),
+        ),
     ):
         with TestClient(app) as client:
             response = client.post("/orders", json={"user_id": "user_123"})
@@ -114,12 +148,16 @@ def test_create_order_cart_empty() -> None:
 
 
 def test_get_order_success() -> None:
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
-    ), patch(
-        "services.order_service.main.get_order_status",
-        return_value="PENDING",
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
+        patch(
+            "apps.order_service.app.api.routes.get_order_status",
+            new=AsyncMock(return_value="PENDING"),
+        ),
     ):
         with TestClient(app) as client:
             response = client.get("/orders/order_123")
@@ -132,12 +170,16 @@ def test_get_order_success() -> None:
 
 
 def test_get_order_not_found() -> None:
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
-    ), patch(
-        "services.order_service.main.get_order_status",
-        return_value=None,
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
+        patch(
+            "apps.order_service.app.api.routes.get_order_status",
+            new=AsyncMock(return_value=None),
+        ),
     ):
         with TestClient(app) as client:
             response = client.get("/orders/order_123")
@@ -148,12 +190,18 @@ def test_get_order_not_found() -> None:
 
 
 def test_list_orders() -> None:
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
-    ), patch(
-        "services.order_service.main.get_all_orders",
-        return_value={"order_123": "PENDING", "order_456": "CONFIRMED"},
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
+        patch(
+            "apps.order_service.app.api.routes.get_all_orders",
+            new=AsyncMock(
+                return_value={"order_123": "PENDING", "order_456": "CONFIRMED"}
+            ),
+        ),
     ):
         with TestClient(app) as client:
             response = client.get("/orders")
@@ -165,17 +213,18 @@ def test_list_orders() -> None:
 
 
 def test_metrics_endpoint_returns_prometheus_data() -> None:
-    with patch("services.order_service.main.broker.connect", new=AsyncMock()), patch(
-        "services.order_service.main.broker.close",
-        new=AsyncMock(),
+    with (
+        patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
+        patch(
+            "apps.order_service.app.main.broker.close",
+            new=AsyncMock(),
+        ),
     ):
         with TestClient(app) as client:
             # Generate some traffic first
             client.get("/health")
-            
+
             response = client.get("/metrics")
 
     assert response.status_code == 200
     assert "http_request_total" in response.text
-
-

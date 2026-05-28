@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
 from packages.config.settings import settings
-from services.api_gateway.app.dependencies import auth
+from apps.api_gateway.app.infrastructure.security import wso2_client as auth
 
 
 class FakeAsyncClient:
@@ -112,7 +112,9 @@ def test_auth_enabled_opaque_access_token_uses_wso2_introspection(monkeypatch) -
     )
     monkeypatch.setattr(auth.httpx, "AsyncClient", FakeAsyncClient)
     monkeypatch.setattr(settings, "gateway_auth_enabled", True)
-    monkeypatch.setattr(settings, "wso2_introspection_url", "https://wso2.local/oauth2/introspect")
+    monkeypatch.setattr(
+        settings, "wso2_introspection_url", "https://wso2.local/oauth2/introspect"
+    )
     monkeypatch.setattr(settings, "wso2_client_id", "local-client-id")
     monkeypatch.setattr(settings, "wso2_client_secret", "local-client-secret")
     monkeypatch.setattr(settings, "wso2_request_timeout_seconds", 7.5)

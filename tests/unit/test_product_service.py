@@ -1,11 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.product_service.main import app
-from services.product_service.schemas import ProductResponse
+from apps.product_service.app.main import app
+from apps.product_service.app.schemas import ProductResponse
 
 
 def test_health_endpoint_returns_ok() -> None:
@@ -28,8 +28,8 @@ def test_create_product_endpoint_success() -> None:
     )
 
     with patch(
-        "services.product_service.main.create_product",
-        return_value=mock_product,
+        "apps.product_service.app.api.routes.create_product",
+        new=AsyncMock(return_value=mock_product),
     ):
         with TestClient(app) as client:
             response = client.post(
@@ -72,8 +72,8 @@ def test_list_products_endpoint_success() -> None:
     ]
 
     with patch(
-        "services.product_service.main.find_products",
-        return_value=mock_products,
+        "apps.product_service.app.api.routes.find_products",
+        new=AsyncMock(return_value=mock_products),
     ):
         with TestClient(app) as client:
             response = client.get("/products")
@@ -97,8 +97,8 @@ def test_get_product_endpoint_success() -> None:
     )
 
     with patch(
-        "services.product_service.main.find_product",
-        return_value=mock_product,
+        "apps.product_service.app.api.routes.find_product",
+        new=AsyncMock(return_value=mock_product),
     ):
         with TestClient(app) as client:
             response = client.get(f"/products/{product_id}")
@@ -114,8 +114,8 @@ def test_get_product_endpoint_not_found() -> None:
     product_id = uuid4()
 
     with patch(
-        "services.product_service.main.find_product",
-        return_value=None,
+        "apps.product_service.app.api.routes.find_product",
+        new=AsyncMock(return_value=None),
     ):
         with TestClient(app) as client:
             response = client.get(f"/products/{product_id}")
@@ -129,9 +129,8 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
     with TestClient(app) as client:
         # Generate some traffic first
         client.get("/health")
-        
+
         response = client.get("/metrics")
 
     assert response.status_code == 200
     assert "http_request_total" in response.text
-

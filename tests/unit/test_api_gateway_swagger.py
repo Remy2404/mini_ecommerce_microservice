@@ -3,8 +3,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.api_gateway.app.main import app
-from services.api_gateway.app.routers import proxy
+from apps.api_gateway.app.main import app
+from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 
 
 class FakeAsyncClient:
@@ -110,7 +110,7 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
         },
     )
 
-    from services.api_gateway.app.routers import auth_routes
+    from apps.api_gateway.app.api.routes import auth_routes
 
     monkeypatch.setattr(auth_routes.httpx, "AsyncClient", FakeWSO2AsyncClient)
     monkeypatch.setattr(settings, "wso2_token_url", "https://wso2.local/oauth2/token")
@@ -151,7 +151,7 @@ def test_wso2_login_invalid_credentials_return_safe_401(monkeypatch) -> None:
     FakeWSO2AsyncClient.init_kwargs = []
     FakeWSO2AsyncClient.response = httpx.Response(401, json={"error": "invalid_grant"})
 
-    from services.api_gateway.app.routers import auth_routes
+    from apps.api_gateway.app.api.routes import auth_routes
 
     monkeypatch.setattr(auth_routes.httpx, "AsyncClient", FakeWSO2AsyncClient)
 
@@ -241,4 +241,7 @@ def test_explicit_post_routes_forward_raw_body_and_headers(
     assert call["content"] == payload
     assert forwarded_headers["authorization"] == "Bearer test-token"
     assert forwarded_headers["x-request-id"] == "request-123"
-    assert forwarded_headers["traceparent"] == "00-00000000000000000000000000000000-0000000000000000-01"
+    assert (
+        forwarded_headers["traceparent"]
+        == "00-00000000000000000000000000000000-0000000000000000-01"
+    )

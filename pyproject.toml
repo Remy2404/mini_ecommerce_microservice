@@ -51,6 +51,7 @@ dependencies = [
     "starlette==1.0.0",
     "typing-inspection==0.4.2",
     "typing_extensions==4.15.0",
+    "ruff>=0.15.14",
 ]
 
 [tool.pytest.ini_options]

@@ -4,8 +4,8 @@ import httpx
 from fastapi.testclient import TestClient
 
 from packages.config.settings import settings
-from services.api_gateway.app.main import app
-from services.api_gateway.app.routers import proxy
+from apps.api_gateway.app.main import app
+from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 
 
 class FakeAsyncClient:
@@ -89,9 +89,15 @@ def test_product_route_proxies_correctly(monkeypatch) -> None:
     assert call["url"] == "http://product-service/products"
     assert forwarded_headers["authorization"] == "Bearer test-token"
     assert forwarded_headers["x-request-id"] == "request-123"
-    assert forwarded_headers["traceparent"] == "00-00000000000000000000000000000000-0000000000000000-01"
+    assert (
+        forwarded_headers["traceparent"]
+        == "00-00000000000000000000000000000000-0000000000000000-01"
+    )
     assert "host" not in forwarded_headers
-    assert FakeAsyncClient.init_kwargs[0]["timeout"] == settings.gateway_request_timeout_seconds
+    assert (
+        FakeAsyncClient.init_kwargs[0]["timeout"]
+        == settings.gateway_request_timeout_seconds
+    )
 
 
 def test_cart_route_proxies_correctly(monkeypatch) -> None:
@@ -165,7 +171,10 @@ def test_existing_request_id_is_preserved(monkeypatch) -> None:
         )
 
     assert response.headers["x-request-id"] == "existing-request-id"
-    assert _headers(FakeAsyncClient.calls[0]["headers"])["x-request-id"] == "existing-request-id"
+    assert (
+        _headers(FakeAsyncClient.calls[0]["headers"])["x-request-id"]
+        == "existing-request-id"
+    )
 
 
 def test_auth_disabled_mode_allows_local_request(monkeypatch) -> None:

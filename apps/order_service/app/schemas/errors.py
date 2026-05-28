@@ -1,0 +1,5 @@
+"""Order Service error codes."""
+
+CART_NOT_FOUND = "CART_NOT_FOUND"
+EMPTY_CART = "EMPTY_CART"
+ORDER_NOT_FOUND = "ORDER_NOT_FOUND"

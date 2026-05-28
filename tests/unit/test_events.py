@@ -15,6 +15,7 @@ from packages.contracts.events import (
     PaymentFailedPayload,
 )
 
+
 @pytest.fixture
 def common_ids():
     return {
@@ -23,6 +24,7 @@ def common_ids():
         "cart_id": "cart_123",
         "payment_id": uuid4(),
     }
+
 
 @pytest.mark.parametrize(
     "event_class, payload_class, event_type, extra_payload",
@@ -76,11 +78,8 @@ def test_domain_events_serialization(
     occurred_at = datetime.fromisoformat(data["occurred_at"])
     assert occurred_at.tzinfo == timezone.utc
 
-   
     assert data["payload"]["user_id"] == common_ids["user_id"]
-    assert (
-        data["payload"]["amount"] == "150.50"
-    )  
+    assert data["payload"]["amount"] == "150.50"
 
     if "reason" in extra_payload:
         assert data["payload"]["reason"] == "Insufficient Funds"
