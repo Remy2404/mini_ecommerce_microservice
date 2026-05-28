@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from packages.config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
+from packages.security import wso2_login
 
 
 class FakeAsyncClient:
@@ -77,6 +78,8 @@ def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
 
     assert "/api/v1/{service}{path}" not in paths
     assert "/api/v1/{service}/{path}" not in paths
+    assert "/auth/login" not in paths
+    assert "/internal/wso2/login" not in paths
 
     expected_routes = {
         ("/api/v1/products", "get", "Product Gateway"),
@@ -89,7 +92,7 @@ def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
         ("/api/v1/orders", "get", "Order Gateway"),
         ("/api/v1/orders", "post", "Order Gateway"),
         ("/api/v1/orders/{order_id}", "get", "Order Gateway"),
-        ("/auth/login", "post", "WSO2 Auth"),
+        ("/api/v1/auth/login", "post", "WSO2 Gateway"),
     }
 
     for path, method, tag in expected_routes:
@@ -110,9 +113,7 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
         },
     )
 
-    from apps.api_gateway.app.api.routes import auth_routes
-
-    monkeypatch.setattr(auth_routes.httpx, "AsyncClient", FakeWSO2AsyncClient)
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
     monkeypatch.setattr(settings, "wso2_token_url", "https://wso2.local/oauth2/token")
     monkeypatch.setattr(settings, "wso2_client_id", "local-client-id")
     monkeypatch.setattr(settings, "wso2_client_secret", "local-client-secret")
@@ -121,7 +122,7 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
 
     with TestClient(app) as client:
         response = client.post(
-            "/auth/login",
+            "/api/v1/auth/login",
             json={
                 "username": "admin",
                 "password": "admin",
@@ -146,23 +147,83 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
     assert FakeWSO2AsyncClient.init_kwargs == [{"timeout": 7.5, "verify": False}]
 
 
+def test_wso2_login_preserves_special_characters_in_password(monkeypatch) -> None:
+    FakeWSO2AsyncClient.calls = []
+    FakeWSO2AsyncClient.init_kwargs = []
+    FakeWSO2AsyncClient.response = httpx.Response(
+        200,
+        json={
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+        },
+    )
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": "temporary$#Password!",
+            },
+        )
+
+    assert response.status_code == 200
+    assert FakeWSO2AsyncClient.calls[0]["data"]["password"] == "temporary$#Password!"
+
+
 def test_wso2_login_invalid_credentials_return_safe_401(monkeypatch) -> None:
     FakeWSO2AsyncClient.calls = []
     FakeWSO2AsyncClient.init_kwargs = []
     FakeWSO2AsyncClient.response = httpx.Response(401, json={"error": "invalid_grant"})
 
-    from apps.api_gateway.app.api.routes import auth_routes
-
-    monkeypatch.setattr(auth_routes.httpx, "AsyncClient", FakeWSO2AsyncClient)
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
 
     with TestClient(app) as client:
         response = client.post(
-            "/auth/login",
+            "/api/v1/auth/login",
             json={"username": "admin", "password": "wrong"},
         )
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid username or password"}
+
+
+def test_wso2_login_client_configuration_errors_return_safe_503(monkeypatch) -> None:
+    FakeWSO2AsyncClient.calls = []
+    FakeWSO2AsyncClient.init_kwargs = []
+    FakeWSO2AsyncClient.response = httpx.Response(401, json={"error": "invalid_client"})
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
+
+
+def test_wso2_login_timeout_or_unavailable_returns_safe_503(monkeypatch) -> None:
+    class RaisingAsyncClient(FakeWSO2AsyncClient):
+        async def post(self, url: str, **kwargs) -> httpx.Response:
+            raise httpx.ConnectTimeout("timeout")
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", RaisingAsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "wrong"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
 
 
 @pytest.mark.parametrize(

@@ -5,5 +5,6 @@ orders, and payments. It adds request IDs, validates bearer tokens when enabled,
 applies Valkey-backed rate limiting, and maps downstream errors to safe
 responses.
 
-The legacy top-level `/auth/login` route remains available for WSO2 local token
-testing. Application auth routes are proxied under `/api/v1/auth/*`.
+The public login flow is `POST /api/v1/auth/login`, tagged `WSO2 Gateway`, and
+it authenticates directly against WSO2 Identity Server. The legacy internal
+`/internal/wso2/login` route is hidden from Swagger.

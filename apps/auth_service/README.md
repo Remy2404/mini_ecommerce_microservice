@@ -5,7 +5,7 @@ Owns users, profiles, addresses, roles, and user-role assignments in `auth_db`.
 ## Routes
 
 - `POST /auth/register`
-- `POST /auth/login`
+- `POST /internal/wso2/login` (hidden from Swagger; used for WSO2 password-grant login)
 - `GET /auth/me`
 - `POST /auth/addresses`
 - `GET /auth/addresses`
@@ -15,4 +15,4 @@ Owns users, profiles, addresses, roles, and user-role assignments in `auth_db`.
 - `GET /auth/users/{user_id}/roles`
 
 Passwords are stored as PBKDF2 hashes. Access tokens are issued by WSO2
-through the API Gateway `/auth/login` route.
+through the API Gateway `/api/v1/auth/login` route.

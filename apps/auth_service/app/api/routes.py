@@ -1,5 +1,6 @@
 """Auth Service routes."""
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,7 +9,6 @@ from apps.auth_service.app.api.dependencies import get_current_token_payload
 from apps.auth_service.app.application.services import AuthService, get_auth_service
 from apps.auth_service.app.domain.exceptions import (
     AddressNotFoundError,
-    InvalidCredentialsError,
     RoleNotFoundError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -17,7 +17,6 @@ from apps.auth_service.app.schemas.requests import (
     AssignRoleRequest,
     CreateAddressRequest,
     CreateRoleRequest,
-    LoginRequest,
     RegisterUserRequest,
 )
 from apps.auth_service.app.schemas.responses import (
@@ -25,8 +24,10 @@ from apps.auth_service.app.schemas.responses import (
     RoleResponse,
     UserProfileResponse,
 )
+from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
 from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
+from packages.security.wso2_login import request_wso2_password_token
 
 router = APIRouter()
 
@@ -53,22 +54,12 @@ async def register_user(
     )
 
 
-@router.post("/auth/login")
-async def login_user(
-    request: LoginRequest,
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[dict[str, str]]:
-    try:
-        await service.login_user(request)
-    except InvalidCredentialsError as exc:
-        raise HTTPException(status_code=401, detail="Invalid credentials") from exc
-
-    raise HTTPException(
-        status_code=status.HTTP_410_GONE,
-        detail=(
-            "Auth Service local login is removed. "
-            "Use API Gateway /auth/login with WSO2 instead."
-        ),
+@router.post("/internal/wso2/login", include_in_schema=False)
+async def login_user(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
+    return await request_wso2_password_token(
+        username=request.username,
+        password=request.password.get_secret_value(),
+        scope=request.scope,
     )
 
 

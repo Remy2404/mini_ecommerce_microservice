@@ -1,10 +1,14 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from apps.api_gateway.app.api.dependencies import rate_limit, validate_token
 from apps.api_gateway.app.infrastructure.http.proxy_client import forward_request
+from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
 from packages.config.settings import settings
 from packages.errors.exceptions import ForbiddenError
 from packages.security.permissions import require_owner_or_role
+from packages.security.wso2_login import request_wso2_password_token
 
 router = APIRouter()
 
@@ -71,7 +75,7 @@ async def list_products(
 
 @router.post(
     "/auth/register",
-    tags=["Auth Gateway"],
+    tags=["WSO2 Gateway"],
     openapi_extra=JSON_REQUEST_BODY,
 )
 async def register_user(
@@ -82,16 +86,22 @@ async def register_user(
 
 @router.post(
     "/auth/login",
-    tags=["Auth Gateway"],
-    openapi_extra=JSON_REQUEST_BODY,
+    tags=["WSO2 Gateway"],
+    summary="Login via WSO2 Identity Server",
+    description=(
+        "Authenticates against WSO2 and returns the WSO2 token response. Copy "
+        "the full WSO2 invitation password exactly, including trailing symbols."
+    ),
 )
-async def login_user(
-    request: Request,
-):
-    return await forward_request("auth", "login", request)
+async def login_user(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
+    return await request_wso2_password_token(
+        username=request.username,
+        password=request.password.get_secret_value(),
+        scope=request.scope,
+    )
 
 
-@router.get("/auth/me", tags=["Auth Gateway"])
+@router.get("/auth/me", tags=["WSO2 Gateway"])
 async def get_me(
     request: Request,
     _: dict = Depends(enforce_gateway_access),
@@ -101,7 +111,7 @@ async def get_me(
 
 @router.post(
     "/auth/addresses",
-    tags=["Auth Gateway"],
+    tags=["WSO2 Gateway"],
     openapi_extra=JSON_REQUEST_BODY,
 )
 async def create_address(
@@ -111,7 +121,7 @@ async def create_address(
     return await forward_request("auth", "addresses", request)
 
 
-@router.get("/auth/addresses", tags=["Auth Gateway"])
+@router.get("/auth/addresses", tags=["WSO2 Gateway"])
 async def list_addresses(
     request: Request,
     _: dict = Depends(enforce_gateway_access),

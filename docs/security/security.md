@@ -96,4 +96,4 @@ JWT_ALGORITHM=RS256
 
 Local WSO2 installs normally use a self-signed certificate. Keep `WSO2_VERIFY_SSL=false` only for local development unless you import the local WSO2 CA certificate into the trust store used by Python/httpx. In production, use a certificate issued by a trusted CA and set `WSO2_VERIFY_SSL=true`.
 
-When auth is enabled, a request without a Bearer token must return `401`. A malformed, expired, inactive, wrong-audience, or wrong-issuer token must also return `401`. Use the `access_token` from `/auth/login` for gateway requests, not the `id_token`.
+When auth is enabled, a request without a Bearer token must return `401`. A malformed, expired, inactive, wrong-audience, or wrong-issuer token must also return `401`. Use the `access_token` from `/api/v1/auth/login` for gateway requests, not the `id_token`.

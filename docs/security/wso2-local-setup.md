@@ -143,7 +143,7 @@ Expected result: the gateway validates opaque WSO2 access tokens through token i
 Use the Swagger login endpoint with the Password grant enabled in WSO2:
 
 ```powershell
-curl.exe -i -X POST http://127.0.0.1:8000/auth/login `
+curl.exe -i -X POST http://127.0.0.1:8000/api/v1/auth/login `
   -H "Content-Type: application/json" `
   -d "{\"username\":\"admin\",\"password\":\"admin\",\"scope\":\"openid profile email\"}"
 ```
@@ -151,6 +151,10 @@ curl.exe -i -X POST http://127.0.0.1:8000/auth/login `
 The endpoint exchanges the username and password with `https://localhost:9443/oauth2/token` using `grant_type=password`. The gateway sends configured WSO2 client credentials only to WSO2 token and introspection endpoints and does not log the username, password, token, or client secret.
 
 Use the returned `access_token` in Swagger Authorize. Paste the raw token value; Swagger adds the `Bearer` prefix for you. Do not use the `id_token` as the API bearer token.
+
+If login returns `401 Invalid username or password`, first compare the request body against the WSO2 invitation text. WSO2-generated passwords can end with punctuation, and the gateway sends the password exactly as typed.
+
+If even the documented `admin` smoke login fails and WSO2 reports `invalid_client`, the `.env` `WSO2_CLIENT_ID` and `WSO2_CLIENT_SECRET` do not match the current WSO2 OIDC application. Copy the active application's client ID and secret from the WSO2 Console, then restart the gateway.
 
 ## Disable Auth Again for Demo
 

@@ -1,12 +1,15 @@
 from uuid import uuid4
 
+import httpx
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from apps.auth_service.app.application.services import AuthService
 from apps.auth_service.app.main import app
-from apps.auth_service.app.schemas.requests import LoginRequest, RegisterUserRequest
+from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import UserProfileResponse
+from packages.config.settings import settings
+from packages.security import wso2_login
 from packages.security.passwords import hash_password, verify_password
 
 
@@ -49,6 +52,47 @@ class FakeAuthRepository:
         return self.roles_by_user.get(user_id, [])
 
 
+class FakeWSO2AsyncClient:
+    init_kwargs: list[dict] = []
+    post_requests: list[dict] = []
+    response: httpx.Response = httpx.Response(
+        200,
+        json={
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+        },
+    )
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.__class__.init_kwargs.append(kwargs)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback) -> None:
+        return None
+
+    async def post(self, url: str, **kwargs) -> httpx.Response:
+        self.__class__.post_requests.append({"url": url, **kwargs})
+        return self.__class__.response
+
+
+def _reset_fake_wso2_client() -> None:
+    FakeWSO2AsyncClient.init_kwargs = []
+    FakeWSO2AsyncClient.post_requests = []
+    FakeWSO2AsyncClient.response = httpx.Response(
+        200,
+        json={
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+        },
+    )
+
+
 def test_password_hash_is_verifiable_and_not_plaintext() -> None:
     password_hash = hash_password("correct horse battery staple")
 
@@ -57,7 +101,7 @@ def test_password_hash_is_verifiable_and_not_plaintext() -> None:
     assert not verify_password("wrong password", password_hash)
 
 
-def test_register_and_login_validate_credentials_only() -> None:
+def test_register_user_still_creates_profile() -> None:
     repository = FakeAuthRepository()
     service = AuthService(repository=repository)
 
@@ -72,14 +116,52 @@ def test_register_and_login_validate_credentials_only() -> None:
             )
         )
     )
-    login_result = asyncio.run(
-        service.login_user(
-            LoginRequest(email="ramy@example.com", password=SecretStr("strong-password"))
-        )
-    )
 
     assert registered.email == "ramy@example.com"
-    assert login_result is None
+
+
+def test_hidden_internal_wso2_login_returns_token_response(monkeypatch) -> None:
+    _reset_fake_wso2_client()
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+    monkeypatch.setattr(settings, "wso2_token_url", "https://wso2.local/oauth2/token")
+    monkeypatch.setattr(settings, "wso2_client_id", "local-client-id")
+    monkeypatch.setattr(settings, "wso2_client_secret", "local-client-secret")
+    monkeypatch.setattr(settings, "wso2_request_timeout_seconds", 7.5)
+    monkeypatch.setattr(settings, "wso2_verify_ssl", False)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/internal/wso2/login",
+            json={
+                "username": "admin",
+                "password": "admin",
+                "scope": "openid profile",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["access_token"] == "access-token"
+    assert FakeWSO2AsyncClient.init_kwargs == [{"timeout": 7.5, "verify": False}]
+    assert FakeWSO2AsyncClient.post_requests[0]["url"] == "https://wso2.local/oauth2/token"
+
+
+def test_hidden_internal_wso2_login_returns_safe_error_for_bad_credentials(monkeypatch) -> None:
+    _reset_fake_wso2_client()
+    FakeWSO2AsyncClient.response = httpx.Response(401, json={"error": "invalid_grant"})
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/internal/wso2/login",
+            json={
+                "username": "admin",
+                "password": "wrong",
+                "scope": "openid profile",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid username or password"}
 
 
 def test_auth_routes_return_stable_envelope(monkeypatch) -> None:
@@ -91,12 +173,10 @@ def test_auth_routes_return_stable_envelope(monkeypatch) -> None:
         is_active=True,
         roles=["customer"],
     )
+
     class FakeService:
         async def register_user(self, request):
             return user
-
-        async def login_user(self, request):
-            return None
 
     from apps.auth_service.app.api.routes import get_auth_service
 
@@ -111,14 +191,8 @@ def test_auth_routes_return_stable_envelope(monkeypatch) -> None:
                     "full_name": "Ramy",
                 },
             )
-            login_response = client.post(
-                "/auth/login",
-                json={"email": "ramy@example.com", "password": "strong-password"},
-            )
     finally:
         app.dependency_overrides.clear()
 
     assert register_response.status_code == 201
     assert register_response.json()["data"]["email"] == "ramy@example.com"
-    assert login_response.status_code == 410
-    assert "WSO2" in login_response.json()["detail"]
