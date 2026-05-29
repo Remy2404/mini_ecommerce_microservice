@@ -60,8 +60,8 @@ class GatewayRegisterUserRequest(BaseModel):
                 "username": "john.doe",
                 "email": "john.doe@example.com",
                 "password": "StrongPass@123",
-                "given_name": "John",
-                "family_name": "Doe",
+                "first_name": "John",
+                "last_name": "Doe",
             }
         },
     )
@@ -69,33 +69,8 @@ class GatewayRegisterUserRequest(BaseModel):
     username: str = Field(min_length=3, max_length=80)
     email: EmailStr
     password: SecretStr = Field(min_length=8)
-    given_name: str = Field(min_length=1, max_length=80)
-    family_name: str = Field(min_length=1, max_length=80)
-
-
-class GatewayCreateAddressRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        json_schema_extra={
-            "example": {
-                "line1": "123 Market Street",
-                "line2": "Unit 4",
-                "city": "Phnom Penh",
-                "state": "Phnom Penh",
-                "postal_code": "12000",
-                "country": "KH",
-                "phone": "+85512345678",
-            }
-        },
-    )
-
-    line1: str = Field(min_length=1, max_length=255)
-    line2: str | None = Field(default=None, max_length=255)
-    city: str = Field(min_length=1, max_length=120)
-    state: str | None = Field(default=None, max_length=120)
-    postal_code: str = Field(min_length=1, max_length=40)
-    country: str = Field(min_length=2, max_length=2)
-    phone: str | None = Field(default=None, max_length=40)
+    first_name: str = Field(min_length=1, max_length=80)
+    last_name: str = Field(min_length=1, max_length=80)
 
 
 class GatewayCreateCategoryRequest(BaseModel):

@@ -10,13 +10,20 @@ from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 from apps.api_gateway.app.infrastructure.security import wso2_client
 from apps.api_gateway.app.main import app as gateway_app
 from apps.auth_service.app.application.services import AuthService
-from apps.auth_service.app.schemas.requests import LoginRequest, RegisterUserRequest
+from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.cart_service.app.application import services as cart_services
 from apps.cart_service.app.schemas import AddCartItemRequest, CartResponse
 from apps.order_service.app.application import services as order_services
-from apps.order_service.app.infrastructure.clients.cart_client import CartSnapshot, CartSnapshotItem
-from apps.order_service.app.infrastructure.messaging.payment_result_consumer import handle_payment_result
-from apps.payment_service.app.infrastructure.messaging.order_created_consumer import process_payment
+from apps.order_service.app.infrastructure.clients.cart_client import (
+    CartSnapshot,
+    CartSnapshotItem,
+)
+from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
+    handle_payment_result,
+)
+from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+    process_payment,
+)
 from apps.product_service.app.schemas import ProductResponse
 from packages.config.settings import settings
 from packages.contracts.events import (
@@ -27,45 +34,6 @@ from packages.contracts.events import (
     PaymentSuccessEvent,
     PaymentSuccessPayload,
 )
-
-
-class FakeAuthRepository:
-    def __init__(self) -> None:
-        self.users_by_email = {}
-        self.users_by_id = {}
-        self.roles_by_user = {}
-
-    async def get_user_by_email(self, email: str):
-        return self.users_by_email.get(email)
-
-    async def get_user_by_id(self, user_id):
-        return self.users_by_id.get(user_id)
-
-    async def create_user(self, *, user_id, email, password_hash, full_name) -> None:
-        record = type(
-            "UserRecord",
-            (),
-            {
-                "user_id": user_id,
-                "email": email,
-                "password_hash": password_hash,
-                "full_name": full_name,
-                "is_active": True,
-            },
-        )()
-        self.users_by_email[email] = record
-        self.users_by_id[user_id] = record
-
-    async def ensure_role(self, name, description):
-        return type("Role", (), {"role_id": uuid4(), "name": name, "description": description})()
-
-    async def assign_role(self, user_id, role_name) -> None:
-        self.roles_by_user.setdefault(user_id, []).append(
-            type("Role", (), {"role_id": uuid4(), "name": role_name, "description": None})()
-        )
-
-    async def list_roles(self, user_id):
-        return self.roles_by_user.get(user_id, [])
 
 
 class FakeGatewayAsyncClient:
@@ -86,8 +54,8 @@ class FakeGatewayAsyncClient:
         return self.__class__.response
 
 
-def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
-    auth_service = AuthService(repository=FakeAuthRepository())
+def test_e2e_user_register_product_cart_and_order(monkeypatch) -> None:
+    auth_service = AuthService()
 
     async def fake_register_wso2_user(
         *,
@@ -111,23 +79,9 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
             "message": "User registered successfully",
         }
 
-    async def fake_wso2_token(*, username: str, password: str, scope: str):
-        assert username == "buyer@example.com"
-        assert password == "strong-password"
-        assert scope == "openid profile email"
-        return {
-            "access_token": "wso2-access-token",
-            "token_type": "Bearer",
-            "expires_in": 3600,
-        }
-
     monkeypatch.setattr(
         "apps.auth_service.app.application.services.register_wso2_user",
         fake_register_wso2_user,
-    )
-    monkeypatch.setattr(
-        "apps.auth_service.app.application.services.request_wso2_password_token",
-        fake_wso2_token,
     )
 
     registered = asyncio.run(
@@ -136,14 +90,9 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
                 username="buyer",
                 email="buyer@example.com",
                 password=SecretStr("strong-password"),
-                given_name="Demo",
-                family_name="Buyer",
+                first_name="Demo",
+                last_name="Buyer",
             )
-        )
-    )
-    login = asyncio.run(
-        auth_service.login_user(
-            LoginRequest(email="buyer@example.com", password=SecretStr("strong-password"))
         )
     )
 
@@ -158,11 +107,15 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
     )
     saved_carts = []
 
-    monkeypatch.setattr(cart_services, "fetch_product", lambda _: _return_async(trusted_product))
+    monkeypatch.setattr(
+        cart_services, "fetch_product", lambda _: _return_async(trusted_product)
+    )
     monkeypatch.setattr(
         cart_services,
         "get_cart",
-        lambda user_id: CartResponse(user_id=user_id, items=[], total_amount=Decimal("0")),
+        lambda user_id: CartResponse(
+            user_id=user_id, items=[], total_amount=Decimal("0")
+        ),
     )
     monkeypatch.setattr(cart_services, "save_cart", saved_carts.append)
 
@@ -172,7 +125,7 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
             AddCartItemRequest(
                 product_id=product_id,
                 quantity=2,
-            )
+            ),
         )
     )
 
@@ -199,7 +152,6 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
     order = asyncio.run(order_services.create_order_for_user(registered.id))
 
     assert registered.id == "wso2-buyer-id"
-    assert login["access_token"] == "wso2-access-token"
     assert saved_carts[0].items[0].unit_price == Decimal("15.00")
     assert saved_carts[0].total_amount == Decimal("30.00")
     assert order.status == "PENDING"

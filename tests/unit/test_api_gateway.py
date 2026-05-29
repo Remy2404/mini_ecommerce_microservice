@@ -3,7 +3,9 @@ from uuid import UUID
 import httpx
 from fastapi.testclient import TestClient
 
-from apps.api_gateway.app.api.dependencies import validate_token as gateway_validate_token
+from apps.api_gateway.app.api.dependencies import (
+    validate_token as gateway_validate_token,
+)
 from packages.config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
@@ -216,7 +218,9 @@ def test_owned_routes_inject_user_id_from_token_sub(monkeypatch) -> None:
     finally:
         app.dependency_overrides.clear()
 
-    forwarded_headers = [httpx.Headers(call["headers"]) for call in FakeAsyncClient.calls]
+    forwarded_headers = [
+        httpx.Headers(call["headers"]) for call in FakeAsyncClient.calls
+    ]
     assert forwarded_headers[0]["x-authenticated-user-id"] == "user-from-sub"
     assert forwarded_headers[1]["x-authenticated-user-id"] == "user-from-sub"
     assert forwarded_headers[2]["x-authenticated-user-id"] == "user-from-sub"
@@ -328,8 +332,8 @@ def test_downstream_5xx_preserves_allowlisted_safe_auth_error(monkeypatch) -> No
                 "username": "john.doe",
                 "email": "ramy@example.com",
                 "password": "StrongPass@123",
-                "given_name": "John",
-                "family_name": "Doe",
+                "first_name": "John",
+                "last_name": "Doe",
             },
         )
 

@@ -68,6 +68,7 @@ def _configure_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeAsyncClient)
     monkeypatch.setattr(settings, "gateway_auth_enabled", False)
     monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(settings, "auth_service_url", "http://auth-service")
     monkeypatch.setattr(settings, "product_service_url", "http://product-service")
     monkeypatch.setattr(settings, "cart_service_url", "http://cart-service")
     monkeypatch.setattr(settings, "order_service_url", "http://order-service")
@@ -100,7 +101,9 @@ def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
     expected_routes = {
         ("/api/v1/auth/register", "post", "WSO2 Gateway"),
         ("/api/v1/auth/login", "post", "WSO2 Gateway"),
-        ("/api/v1/auth/me", "get", "WSO2 Gateway"),
+        ("/api/v1/auth/users", "get", "WSO2 Gateway"),
+        ("/api/v1/auth/users/search", "get", "WSO2 Gateway"),
+        ("/api/v1/auth/users/{user_id}", "get", "WSO2 Gateway"),
         ("/api/v1/products", "get", "Product Gateway"),
         ("/api/v1/products", "post", "Product Gateway"),
         ("/api/v1/products/{product_id}", "get", "Product Gateway"),
@@ -158,14 +161,48 @@ def test_openapi_documents_auth_register_and_wso2_login_responses() -> None:
     assert "Use the WSO2 username" in login_operation["description"]
 
 
+def test_openapi_documents_wso2_user_routes() -> None:
+    with TestClient(app) as client:
+        schema = client.get("/openapi.json").json()
+
+    list_operation = schema["paths"]["/api/v1/auth/users"]["get"]
+    search_operation = schema["paths"]["/api/v1/auth/users/search"]["get"]
+    detail_operation = schema["paths"]["/api/v1/auth/users/{user_id}"]["get"]
+
+    list_params = {param["name"] for param in list_operation["parameters"]}
+    search_params = {param["name"] for param in search_operation["parameters"]}
+    detail_params = {param["name"] for param in detail_operation["parameters"]}
+
+    assert {
+        "filter",
+        "attributes",
+        "excludedAttributes",
+        "startIndex",
+        "count",
+    } <= list_params
+    assert {"q", "startIndex", "count"} <= search_params
+    assert "user_id" in detail_params
+    assert "403" in list_operation["responses"]
+    assert "404" in detail_operation["responses"]
+
+    list_success_ref = list_operation["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]["$ref"]
+    detail_success_ref = detail_operation["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]["$ref"]
+    assert list_success_ref.endswith("/GatewayWso2UsersListResponse")
+    assert detail_success_ref.endswith("/GatewayWso2UserDetailResponse")
+
+
 def test_openapi_documents_gateway_post_request_body_fields() -> None:
     with TestClient(app) as client:
         schema = client.get("/openapi.json").json()
 
     expected_request_bodies = {
         "/api/v1/auth/register": (
-            {"username", "email", "password", "given_name", "family_name"},
-            {"username", "email", "password", "given_name", "family_name"},
+            {"username", "email", "password", "first_name", "last_name"},
+            {"username", "email", "password", "first_name", "last_name"},
         ),
         "/api/v1/auth/login": (
             {"username", "password", "scope"},
@@ -349,6 +386,17 @@ def test_wso2_login_timeout_or_unavailable_returns_safe_503(monkeypatch) -> None
 @pytest.mark.parametrize(
     ("method", "path", "expected_url"),
     [
+        ("GET", "/api/v1/auth/users?count=10", "http://auth-service/auth/users"),
+        (
+            "GET",
+            "/api/v1/auth/users/search?q=admin",
+            "http://auth-service/auth/users/search",
+        ),
+        (
+            "GET",
+            "/api/v1/auth/users/wso2-user-123",
+            "http://auth-service/auth/users/wso2-user-123",
+        ),
         ("GET", "/api/v1/products", "http://product-service/products"),
         (
             "GET",
@@ -380,6 +428,31 @@ def test_explicit_get_and_delete_routes_proxy_correctly(
     assert response.status_code == 200
     assert FakeAsyncClient.calls[0]["method"] == method
     assert FakeAsyncClient.calls[0]["url"] == expected_url
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_params"),
+    [
+        (
+            "/api/v1/auth/users?count=10&startIndex=2",
+            {"count": "10", "startIndex": "2"},
+        ),
+        ("/api/v1/auth/users/search?q=admin&count=5", {"q": "admin", "count": "5"}),
+    ],
+)
+def test_wso2_user_routes_forward_query_params(
+    monkeypatch: pytest.MonkeyPatch,
+    path: str,
+    expected_params: dict[str, str],
+) -> None:
+    _configure_gateway(monkeypatch)
+
+    with TestClient(app) as client:
+        response = client.get(path)
+
+    assert response.status_code == 200
+    forwarded_params = dict(FakeAsyncClient.calls[0]["params"])
+    assert expected_params.items() <= forwarded_params.items()
 
 
 @pytest.mark.parametrize(
