@@ -1,12 +1,11 @@
 """Auth Service orchestration."""
 
-from uuid import UUID, uuid4
+from typing import Any
+from uuid import UUID
 
 from apps.auth_service.app.domain.exceptions import (
     AddressNotFoundError,
-    InvalidCredentialsError,
     RoleNotFoundError,
-    UserAlreadyExistsError,
     UserNotFoundError,
 )
 from apps.auth_service.app.infrastructure.database.repository import AuthRepository
@@ -18,40 +17,40 @@ from apps.auth_service.app.schemas.requests import (
 )
 from apps.auth_service.app.schemas.responses import (
     AddressResponse,
+    RegisterUserResponse,
     RoleResponse,
     UserProfileResponse,
 )
-from packages.security.passwords import hash_password, verify_password
+from packages.security.wso2_login import request_wso2_password_token
+from packages.security.wso2_scim import register_wso2_user
 
 
 class AuthService:
     def __init__(self, repository: AuthRepository | None = None) -> None:
         self.repository = repository or AuthRepository()
 
-    async def register_user(self, request: RegisterUserRequest) -> UserProfileResponse:
-        existing = await self.repository.get_user_by_email(request.email)
-        if existing is not None:
-            raise UserAlreadyExistsError
-
-        user_id = uuid4()
-        password_hash = hash_password(request.password.get_secret_value())
-        await self.repository.create_user(
-            user_id=user_id,
-            email=request.email,
-            password_hash=password_hash,
-            full_name=request.full_name,
+    async def register_user(
+        self,
+        request: RegisterUserRequest,
+        *,
+        request_id: str | None = None,
+    ) -> RegisterUserResponse:
+        user = await register_wso2_user(
+            username=request.username,
+            email=str(request.email),
+            password=request.password.get_secret_value(),
+            given_name=request.given_name,
+            family_name=request.family_name,
+            request_id=request_id,
         )
-        await self.repository.ensure_role("customer", "Default customer role")
-        await self.repository.assign_role(user_id, "customer")
-        return await self.get_user_profile(user_id)
+        return RegisterUserResponse(**user)
 
-    async def login_user(self, request: LoginRequest) -> None:
-        user = await self.repository.get_user_by_email(request.email)
-        if user is None or not verify_password(
-            request.password.get_secret_value(),
-            user.password_hash,
-        ):
-            raise InvalidCredentialsError
+    async def login_user(self, request: LoginRequest) -> dict[str, Any]:
+        return await request_wso2_password_token(
+            username=str(request.email),
+            password=request.password.get_secret_value(),
+            scope="openid profile email",
+        )
 
     async def get_user_profile(self, user_id: UUID) -> UserProfileResponse:
         user = await self.repository.get_user_by_id(user_id)

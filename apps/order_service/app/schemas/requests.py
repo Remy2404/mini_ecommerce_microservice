@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class CreateOrderRequest(BaseModel):
-    user_id: str = Field(min_length=1)
+    model_config = ConfigDict(extra="forbid")

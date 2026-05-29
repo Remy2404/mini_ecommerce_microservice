@@ -89,12 +89,55 @@ class FakeGatewayAsyncClient:
 def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
     auth_service = AuthService(repository=FakeAuthRepository())
 
+    async def fake_register_wso2_user(
+        *,
+        username: str,
+        email: str,
+        password: str,
+        given_name: str,
+        family_name: str,
+        request_id: str | None = None,
+    ):
+        assert username == "buyer"
+        assert email == "buyer@example.com"
+        assert password == "strong-password"
+        assert given_name == "Demo"
+        assert family_name == "Buyer"
+        assert request_id is None
+        return {
+            "id": "wso2-buyer-id",
+            "username": username,
+            "email": email,
+            "message": "User registered successfully",
+        }
+
+    async def fake_wso2_token(*, username: str, password: str, scope: str):
+        assert username == "buyer@example.com"
+        assert password == "strong-password"
+        assert scope == "openid profile email"
+        return {
+            "access_token": "wso2-access-token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+        }
+
+    monkeypatch.setattr(
+        "apps.auth_service.app.application.services.register_wso2_user",
+        fake_register_wso2_user,
+    )
+    monkeypatch.setattr(
+        "apps.auth_service.app.application.services.request_wso2_password_token",
+        fake_wso2_token,
+    )
+
     registered = asyncio.run(
         auth_service.register_user(
             RegisterUserRequest(
+                username="buyer",
                 email="buyer@example.com",
                 password=SecretStr("strong-password"),
-                full_name="Buyer",
+                given_name="Demo",
+                family_name="Buyer",
             )
         )
     )
@@ -125,8 +168,8 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
 
     cart = asyncio.run(
         cart_services.add_item_to_cart(
+            registered.id,
             AddCartItemRequest(
-                user_id=str(registered.user_id),
                 product_id=product_id,
                 quantity=2,
             )
@@ -153,9 +196,10 @@ def test_e2e_user_register_login_product_cart_and_order(monkeypatch) -> None:
     monkeypatch.setattr(order_services, "save_order_with_outbox", _async_noop)
     monkeypatch.setattr(order_services, "publish_pending_order_events", _async_noop)
 
-    order = asyncio.run(order_services.create_order_for_user(str(registered.user_id)))
+    order = asyncio.run(order_services.create_order_for_user(registered.id))
 
-    assert login is None
+    assert registered.id == "wso2-buyer-id"
+    assert login["access_token"] == "wso2-access-token"
     assert saved_carts[0].items[0].unit_price == Decimal("15.00")
     assert saved_carts[0].total_amount == Decimal("30.00")
     assert order.status == "PENDING"

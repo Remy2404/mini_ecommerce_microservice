@@ -4,13 +4,15 @@ from uuid import uuid4
 import httpx
 from fastapi.testclient import TestClient
 
-from packages.config.settings import settings
 from apps.cart_service.app.application import services as cart_service
 from apps.cart_service.app.infrastructure.clients import product_client
 from apps.cart_service.app.main import app
 from apps.cart_service.app.schemas import CartItemResponse, CartResponse
+from packages.config.settings import settings
+from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 
 PRODUCT_ID = uuid4()
+OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}
 
 
 class FakeAsyncClient:
@@ -112,7 +114,9 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
     assert "http_request_total" in response.text
 
 
-def test_add_cart_item_requires_only_user_product_and_quantity(monkeypatch) -> None:
+def test_add_cart_item_uses_authenticated_owner_and_trusted_product(
+    monkeypatch,
+) -> None:
     _reset_fake_http_client()
     saved_carts = _install_cart_fakes(monkeypatch)
 
@@ -120,10 +124,10 @@ def test_add_cart_item_requires_only_user_product_and_quantity(monkeypatch) -> N
         response = client.post(
             "/cart/items",
             json={
-                "user_id": "user_123",
                 "product_id": str(PRODUCT_ID),
                 "quantity": 2,
             },
+            headers=OWNER_HEADERS,
         )
 
     assert response.status_code == 201
@@ -156,6 +160,7 @@ def test_add_cart_item_rejects_client_supplied_price_and_name(monkeypatch) -> No
                 "quantity": 2,
                 "unit_price": "0.01",
             },
+            headers=OWNER_HEADERS,
         )
 
     assert response.status_code == 422
@@ -175,10 +180,10 @@ def test_add_cart_item_returns_404_when_product_not_found(monkeypatch) -> None:
         response = client.post(
             "/cart/items",
             json={
-                "user_id": "user_123",
                 "product_id": str(PRODUCT_ID),
                 "quantity": 1,
             },
+            headers=OWNER_HEADERS,
         )
 
     assert response.status_code == 404
@@ -197,10 +202,10 @@ def test_add_cart_item_returns_503_when_product_service_unavailable(
         response = client.post(
             "/cart/items",
             json={
-                "user_id": "user_123",
                 "product_id": str(PRODUCT_ID),
                 "quantity": 1,
             },
+            headers=OWNER_HEADERS,
         )
 
     assert response.status_code == 503
@@ -233,10 +238,10 @@ def test_existing_cart_item_is_repriced_from_trusted_product(monkeypatch) -> Non
         response = client.post(
             "/cart/items",
             json={
-                "user_id": "user_123",
                 "product_id": str(PRODUCT_ID),
                 "quantity": 2,
             },
+            headers=OWNER_HEADERS,
         )
 
     assert response.status_code == 201

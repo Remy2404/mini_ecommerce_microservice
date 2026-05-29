@@ -19,6 +19,20 @@ class UserProfileResponse(BaseModel):
     roles: list[str]
 
 
+class WSO2UserResponse(BaseModel):
+    user_id: str
+    username: str
+    email: EmailStr
+    roles: list[str]
+
+
+class RegisterUserResponse(BaseModel):
+    id: str
+    username: str
+    email: EmailStr
+    message: str
+
+
 class AuthTokenResponse(BaseModel):
     access_token: str
     token_type: str = "Bearer"

@@ -1,10 +1,12 @@
 """Order router."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 
 from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
+from packages.errors.exceptions import ForbiddenError
 from packages.observability.logging import get_logger
+from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.order_service.app.domain.exceptions import (
     CartNotFoundError,
     EmptyCartError,
@@ -21,6 +23,15 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+def _require_authenticated_user_id(user_id: str | None) -> str:
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authenticated user",
+        )
+    return user_id
+
+
 @router.get("/health")
 async def health() -> dict[str, str]:
     logger.info("Health check requested")
@@ -35,9 +46,16 @@ async def health() -> dict[str, str]:
     "/orders",
     status_code=status.HTTP_201_CREATED,
 )
-async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str]]:
+async def create_order(
+    request: CreateOrderRequest | None = None,
+    authenticated_user_id: str | None = Header(
+        default=None,
+        alias=AUTHENTICATED_USER_ID_HEADER,
+    ),
+) -> ApiResponse[dict[str, str]]:
+    user_id = _require_authenticated_user_id(authenticated_user_id)
     try:
-        created_order = await create_order_for_user(request.user_id)
+        created_order = await create_order_for_user(user_id)
     except CartNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -60,8 +78,23 @@ async def create_order(request: CreateOrderRequest) -> ApiResponse[dict[str, str
 
 
 @router.get("/orders/{order_id}")
-async def get_order(order_id: str) -> ApiResponse[dict[str, str]]:
-    order_status = await get_order_status(order_id)
+async def get_order(
+    order_id: str,
+    authenticated_user_id: str | None = Header(
+        default=None,
+        alias=AUTHENTICATED_USER_ID_HEADER,
+    ),
+) -> ApiResponse[dict[str, str]]:
+    try:
+        order_status = await get_order_status(
+            order_id,
+            user_id=_require_authenticated_user_id(authenticated_user_id),
+        )
+    except ForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
+        ) from exc
 
     if order_status is None:
         raise HTTPException(
@@ -80,9 +113,16 @@ async def get_order(order_id: str) -> ApiResponse[dict[str, str]]:
 
 
 @router.get("/orders")
-async def list_orders() -> ApiResponse[dict[str, str]]:
+async def list_orders(
+    authenticated_user_id: str | None = Header(
+        default=None,
+        alias=AUTHENTICATED_USER_ID_HEADER,
+    ),
+) -> ApiResponse[dict[str, str]]:
     return ApiResponse[dict[str, str]](
         success=True,
         message="Orders fetched successfully",
-        data=await get_all_orders(),
+        data=await get_all_orders(
+            user_id=_require_authenticated_user_id(authenticated_user_id),
+        ),
     )

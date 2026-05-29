@@ -4,11 +4,24 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 
 
 class RegisterUserRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "username": "john.doe",
+                "email": "john.doe@example.com",
+                "password": "StrongPass@123",
+                "given_name": "John",
+                "family_name": "Doe",
+            }
+        },
+    )
 
+    username: str = Field(min_length=3, max_length=80)
     email: EmailStr
     password: SecretStr = Field(min_length=8)
-    full_name: str = Field(min_length=1, max_length=255)
+    given_name: str = Field(min_length=1, max_length=80)
+    family_name: str = Field(min_length=1, max_length=80)
 
 
 class LoginRequest(BaseModel):

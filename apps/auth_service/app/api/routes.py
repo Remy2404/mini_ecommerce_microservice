@@ -3,14 +3,13 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
 from apps.auth_service.app.api.dependencies import get_current_token_payload
 from apps.auth_service.app.application.services import AuthService, get_auth_service
 from apps.auth_service.app.domain.exceptions import (
     AddressNotFoundError,
     RoleNotFoundError,
-    UserAlreadyExistsError,
     UserNotFoundError,
 )
 from apps.auth_service.app.schemas.requests import (
@@ -21,15 +20,19 @@ from apps.auth_service.app.schemas.requests import (
 )
 from apps.auth_service.app.schemas.responses import (
     AddressResponse,
+    RegisterUserResponse,
     RoleResponse,
-    UserProfileResponse,
+    WSO2UserResponse,
 )
 from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
 from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
+from packages.observability.logging import get_logger
 from packages.security.wso2_login import request_wso2_password_token
+from packages.security.wso2_scim import WSO2SCIMError, current_wso2_user
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get("/health")
@@ -37,15 +40,34 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.auth_service_name}
 
 
-@router.post("/auth/register", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/auth/register",
+    response_model=ApiResponse[RegisterUserResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Register user with WSO2",
+    description="Creates a new user in WSO2 Identity Server using SCIM2.",
+)
 async def register_user(
-    request: RegisterUserRequest,
+    request: Request,
+    payload: RegisterUserRequest,
     service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[UserProfileResponse]:
+) -> ApiResponse[RegisterUserResponse]:
+    request_id = request.headers.get("x-request-id")
     try:
-        user = await service.register_user(request)
-    except UserAlreadyExistsError as exc:
-        raise HTTPException(status_code=409, detail="User already exists") from exc
+        user = await service.register_user(payload, request_id=request_id)
+    except WSO2SCIMError as exc:
+        logger.error(
+            "WSO2 user registration failed",
+            request_id=request_id,
+            target_url=exc.target_url,
+            status_code=exc.status_code,
+            error_type=exc.error_type,
+            wso2_error_code=exc.wso2_error_code,
+        )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.message,
+        ) from exc
 
     return ApiResponse(
         success=True,
@@ -65,13 +87,37 @@ async def login_user(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
 
 @router.get("/auth/me")
 async def get_me(
+    request: Request,
     token_payload: dict = Depends(get_current_token_payload),
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[UserProfileResponse]:
+    authorization: str | None = Header(default=None),
+) -> ApiResponse[WSO2UserResponse]:
+    request_id = request.headers.get("x-request-id")
+    access_token = (
+        authorization.split(" ", 1)[1].strip()
+        if authorization and authorization.lower().startswith("bearer ")
+        else None
+    )
     try:
-        user = await service.get_user_profile(UUID(token_payload["sub"]))
-    except (ValueError, UserNotFoundError) as exc:
-        raise HTTPException(status_code=404, detail="User not found") from exc
+        user = WSO2UserResponse(
+            **await current_wso2_user(
+                token_payload,
+                access_token=access_token,
+                request_id=request_id,
+            )
+        )
+    except WSO2SCIMError as exc:
+        logger.error(
+            "WSO2 current-user lookup failed",
+            request_id=request_id,
+            target_url=exc.target_url,
+            status_code=exc.status_code,
+            error_type=exc.error_type,
+            wso2_error_code=exc.wso2_error_code,
+        )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.message,
+        ) from exc
 
     return ApiResponse(success=True, message="User profile fetched successfully", data=user)
 

@@ -3,6 +3,7 @@ from uuid import UUID
 import httpx
 from fastapi.testclient import TestClient
 
+from apps.api_gateway.app.api.dependencies import validate_token as gateway_validate_token
 from packages.config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
@@ -191,6 +192,72 @@ def test_auth_disabled_mode_allows_local_request(monkeypatch) -> None:
     assert len(FakeAsyncClient.calls) == 1
 
 
+def test_owned_routes_inject_user_id_from_token_sub(monkeypatch) -> None:
+    _reset_fake_http_client()
+    monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(settings, "gateway_auth_enabled", True)
+    monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(settings, "cart_service_url", "http://cart-service")
+    monkeypatch.setattr(settings, "order_service_url", "http://order-service")
+    monkeypatch.setattr(settings, "payment_service_url", "http://payment-service")
+
+    app.dependency_overrides[gateway_validate_token] = lambda: {
+        "sub": "user-from-sub",
+        "roles": ["customer"],
+    }
+    try:
+        with TestClient(app) as client:
+            client.post(
+                "/api/v1/cart/items",
+                json={"product_id": "product_123", "quantity": 1},
+            )
+            client.get("/api/v1/orders")
+            client.get("/api/v1/payments/pay_123")
+    finally:
+        app.dependency_overrides.clear()
+
+    forwarded_headers = [httpx.Headers(call["headers"]) for call in FakeAsyncClient.calls]
+    assert forwarded_headers[0]["x-authenticated-user-id"] == "user-from-sub"
+    assert forwarded_headers[1]["x-authenticated-user-id"] == "user-from-sub"
+    assert forwarded_headers[2]["x-authenticated-user-id"] == "user-from-sub"
+
+
+def test_owned_post_routes_reject_client_supplied_user_id(monkeypatch) -> None:
+    _reset_fake_http_client()
+    monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(settings, "gateway_auth_enabled", True)
+    monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(settings, "cart_service_url", "http://cart-service")
+    monkeypatch.setattr(settings, "order_service_url", "http://order-service")
+
+    app.dependency_overrides[gateway_validate_token] = lambda: {
+        "sub": "user-from-sub",
+        "roles": ["customer"],
+    }
+    try:
+        with TestClient(app) as client:
+            cart_response = client.post(
+                "/api/v1/cart/items",
+                json={
+                    "user_id": "evil-user",
+                    "product_id": "product_123",
+                    "quantity": 1,
+                },
+            )
+            order_response = client.post(
+                "/api/v1/orders",
+                json={"user_id": "evil-user"},
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert cart_response.status_code == 403
+    assert cart_response.json() == {"detail": "Forbidden"}
+    assert order_response.status_code == 403
+    assert order_response.json() == {"detail": "Forbidden"}
+    assert FakeAsyncClient.calls == []
+
+
 def test_downstream_connect_error_maps_to_503(monkeypatch) -> None:
     _reset_fake_http_client()
     FakeAsyncClient.error = httpx.ConnectError("connection failed")
@@ -241,6 +308,33 @@ def test_downstream_5xx_uses_safe_body(monkeypatch) -> None:
     assert response.status_code == 503
     assert response.json() == {"detail": "Downstream service error"}
     assert "password" not in response.text
+
+
+def test_downstream_5xx_preserves_allowlisted_safe_auth_error(monkeypatch) -> None:
+    _reset_fake_http_client()
+    FakeAsyncClient.response = httpx.Response(
+        503,
+        json={"detail": "WSO2 registration configuration error"},
+    )
+    monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(settings, "gateway_auth_enabled", False)
+    monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(settings, "auth_service_url", "http://auth-service")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "john.doe",
+                "email": "ramy@example.com",
+                "password": "StrongPass@123",
+                "given_name": "John",
+                "family_name": "Doe",
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "WSO2 registration configuration error"}
 
 
 def test_no_open_proxy_behavior(monkeypatch) -> None:

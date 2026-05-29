@@ -10,8 +10,10 @@ from apps.auth_service.app.schemas.requests import (
 from apps.auth_service.app.schemas.responses import (
     AddressResponse,
     AuthTokenResponse,
+    RegisterUserResponse,
     RoleResponse,
     UserProfileResponse,
+    WSO2UserResponse,
 )
 
 __all__ = [
@@ -21,7 +23,9 @@ __all__ = [
     "CreateAddressRequest",
     "CreateRoleRequest",
     "LoginRequest",
+    "RegisterUserResponse",
     "RegisterUserRequest",
     "RoleResponse",
     "UserProfileResponse",
+    "WSO2UserResponse",
 ]

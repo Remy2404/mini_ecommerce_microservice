@@ -2,18 +2,28 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, status
 
 from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
 from packages.observability.logging import get_logger
 from packages.observability.tracing import add_span_attributes
+from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.cart_service.app.application import services as cart_service
 from apps.cart_service.app.schemas import AddCartItemRequest, CartResponse
 
 router = APIRouter()
 
 logger = get_logger(__name__)
+
+
+def _require_authenticated_user_id(user_id: str | None) -> str:
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authenticated user",
+        )
+    return user_id
 
 
 @router.get("/health")
@@ -32,9 +42,14 @@ async def health() -> dict[str, str]:
 )
 async def add_cart_item(
     request: AddCartItemRequest,
+    authenticated_user_id: str | None = Header(
+        default=None,
+        alias=AUTHENTICATED_USER_ID_HEADER,
+    ),
 ) -> ApiResponse[CartResponse]:
+    user_id = _require_authenticated_user_id(authenticated_user_id)
     try:
-        cart = await cart_service.add_item_to_cart(request)
+        cart = await cart_service.add_item_to_cart(user_id, request)
     except cart_service.ProductNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -53,7 +68,7 @@ async def add_cart_item(
 
     add_span_attributes(
         {
-            "user.id": request.user_id,
+            "user.id": user_id,
             "product.id": str(request.product_id),
             "cart.items_count": len(cart.items),
         }
@@ -61,7 +76,7 @@ async def add_cart_item(
 
     logger.info(
         "Cart item added",
-        user_id=request.user_id,
+        user_id=user_id,
         product_id=str(request.product_id),
         quantity=request.quantity,
     )
