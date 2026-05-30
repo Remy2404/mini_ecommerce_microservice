@@ -39,6 +39,8 @@ python -m venv .venv
 
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
+# OR
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; .\.venv\Scripts\Activate.ps1
 
 # Install dependencies
 uv sync
