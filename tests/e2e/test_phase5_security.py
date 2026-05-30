@@ -109,8 +109,7 @@ def test_p5_s01_missing_bearer_token_rejected(gateway_client, mock_settings) -> 
     response = gateway_client.get("/api/v1/products")
 
     assert response.status_code in [401, 403], (
-        f"Expected 401/403, got {response.status_code}. "
-        f"Response: {response.json()}"
+        f"Expected 401/403, got {response.status_code}. Response: {response.json()}"
     )
     # Verify no sensitive internal details leaked
     response_data = response.json()
@@ -129,6 +128,7 @@ def test_p5_s02_invalid_bearer_token_rejected(mock_settings) -> None:
 
     Expected Result: Request rejected with 401 or 403 status code.
     """
+
     # Override the validate_token dependency to raise an exception for invalid tokens
     def invalid_token_validator(credentials=None):
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -143,8 +143,7 @@ def test_p5_s02_invalid_bearer_token_rejected(mock_settings) -> None:
             )
 
         assert response.status_code in [401, 403], (
-            f"Expected 401/403, got {response.status_code}. "
-            f"Response: {response.json()}"
+            f"Expected 401/403, got {response.status_code}. Response: {response.json()}"
         )
         # Verify no sensitive internal details leaked
         response_data = response.json()
@@ -205,8 +204,7 @@ def test_p5_s03_inactive_opaque_token_rejected(
     )
 
     assert response.status_code in [401, 403], (
-        f"Expected 401/403, got {response.status_code}. "
-        f"Response: {response.json()}"
+        f"Expected 401/403, got {response.status_code}. Response: {response.json()}"
     )
 
 
@@ -303,8 +301,7 @@ def test_p5_s04_idor_cart_own_access_allowed(
 
     # Should be allowed (either 200 or redirect to service)
     assert response.status_code < 400, (
-        f"Expected 2xx or 3xx, got {response.status_code}. "
-        f"Response: {response.json()}"
+        f"Expected 2xx or 3xx, got {response.status_code}. Response: {response.json()}"
     )
 
 
@@ -476,8 +473,7 @@ def test_p5_s08_no_traceback_in_error_response(gateway_client, mock_settings) ->
 
     # Ensure no sensitive details
     assert "traceback" not in response_str, (
-        "Error response should not contain traceback. "
-        f"Response: {response_data}"
+        f"Error response should not contain traceback. Response: {response_data}"
     )
     assert "exception" not in response_str or "exception" in [
         "exception_type",
@@ -500,9 +496,12 @@ def test_p5_s08_no_internal_server_error_details(
     async def fake_forward_error(**kwargs):
         # Simulate a downstream error with internal details
         from fastapi.responses import JSONResponse
+
         return JSONResponse(
             status_code=500,
-            content={"detail": "Downstream service error"},  # Generic, not leaked details
+            content={
+                "detail": "Downstream service error"
+            },  # Generic, not leaked details
         )
 
     monkeypatch.setattr(
@@ -527,12 +526,10 @@ def test_p5_s08_no_internal_server_error_details(
 
     # Check response doesn't leak internal details
     assert "database" not in response_str, (
-        "Error response should not mention database details. "
-        f"Response: {response_data}"
+        f"Error response should not mention database details. Response: {response_data}"
     )
     assert "password" not in response_str, (
-        "Error response should not mention password details. "
-        f"Response: {response_data}"
+        f"Error response should not mention password details. Response: {response_data}"
     )
 
 

@@ -69,15 +69,26 @@ def test_create_order_endpoint_returns_created_order() -> None:
     save_order_with_outbox_mock.assert_awaited_once()
 
 
-@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.apply_payment_result_once", new_callable=AsyncMock)
-@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.get_valkey_client")
-@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_logging")
-@patch("apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_tracing")
+@patch(
+    "apps.order_service.app.infrastructure.messaging.payment_result_consumer.apply_payment_result_once",
+    new_callable=AsyncMock,
+)
+@patch(
+    "apps.order_service.app.infrastructure.messaging.payment_result_consumer.get_valkey_client"
+)
+@patch(
+    "apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_logging"
+)
+@patch(
+    "apps.order_service.app.infrastructure.messaging.payment_result_consumer.setup_tracing"
+)
 def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_apply_result
 ) -> None:
     from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
-    from apps.order_service.app.infrastructure.messaging.payment_result_consumer import handle_payment_result
+    from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
+        handle_payment_result,
+    )
     import asyncio
 
     event = PaymentSuccessEvent(
@@ -105,7 +116,9 @@ def test_handle_payment_success_clears_cart(
 
 
 def test_create_order_cart_not_found() -> None:
-    from apps.order_service.app.infrastructure.clients.cart_client import CartNotFoundError
+    from apps.order_service.app.infrastructure.clients.cart_client import (
+        CartNotFoundError,
+    )
 
     with (
         patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),

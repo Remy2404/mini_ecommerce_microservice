@@ -22,9 +22,13 @@ async def publish_pending_order_events(limit: int = 25) -> int:
     for pending in await claim_pending_outbox_events(limit=limit):
         try:
             if pending.routing_key != settings.order_created_routing_key:
-                raise ValueError(f"Unsupported order outbox routing key: {pending.routing_key}")
+                raise ValueError(
+                    f"Unsupported order outbox routing key: {pending.routing_key}"
+                )
 
-            await publish_order_created(OrderCreatedEvent.model_validate(pending.payload))
+            await publish_order_created(
+                OrderCreatedEvent.model_validate(pending.payload)
+            )
             await mark_outbox_event_published(pending.event_id)
             published += 1
         except Exception as exc:

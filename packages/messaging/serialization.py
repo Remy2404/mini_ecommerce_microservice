@@ -14,7 +14,9 @@ def event_to_message(event: BaseModel | dict[str, Any]) -> dict[str, Any]:
     return event
 
 
-def parse_event(model: type[EventModel], message: dict[str, Any] | BaseModel) -> EventModel:
+def parse_event(
+    model: type[EventModel], message: dict[str, Any] | BaseModel
+) -> EventModel:
     if isinstance(message, model):
         return message
 

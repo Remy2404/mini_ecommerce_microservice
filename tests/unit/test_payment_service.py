@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from packages.contracts.events import OrderCreatedEvent, OrderCreatedPayload
-from apps.payment_service.app.infrastructure.messaging.order_created_consumer import process_payment
+from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+    process_payment,
+)
 
 
 def _order_created_event() -> OrderCreatedEvent:
@@ -22,7 +24,10 @@ def test_process_payment_persists_success_before_publishing() -> None:
     event = _order_created_event()
 
     with (
-        patch("apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep", new=AsyncMock()),
+        patch(
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+            new=AsyncMock(),
+        ),
         patch(
             "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
             return_value=0,
@@ -55,7 +60,10 @@ def test_process_payment_persists_failure_before_publishing() -> None:
     event = _order_created_event()
 
     with (
-        patch("apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep", new=AsyncMock()),
+        patch(
+            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+            new=AsyncMock(),
+        ),
         patch(
             "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
             return_value=1,

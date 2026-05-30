@@ -19,7 +19,9 @@ from apps.product_service.app.schemas import (
 )
 
 
-async def create_category_for_catalog(request: CreateCategoryRequest) -> CategoryResponse:
+async def create_category_for_catalog(
+    request: CreateCategoryRequest,
+) -> CategoryResponse:
     return await create_category(name=request.name, description=request.description)
 
 

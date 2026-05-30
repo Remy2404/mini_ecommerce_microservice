@@ -27,7 +27,9 @@ def test_compose_defines_healthchecks_for_runtime_dependencies() -> None:
             if next_match
             else -1
         )
-        service_block = compose[service_start : next_service if next_service > 0 else None]
+        service_block = compose[
+            service_start : next_service if next_service > 0 else None
+        ]
 
         assert "healthcheck:" in service_block
 
