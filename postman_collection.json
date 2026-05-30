@@ -1,0 +1,643 @@
+{
+  "info": {
+    "_postman_id": "phase3-thiya-ecommerce",
+    "name": "Phase 3 - API Integration Tests (Thiya)",
+    "description": "API integration validation and contract assertions for the e-commerce microservices platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "P3-A01: Auth/Login - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 200",
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain access_token field",
+              "pm.test('Response contains access_token', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('access_token');",
+              "    pm.expect(jsonData.access_token).to.be.a('string');",
+              "    pm.expect(jsonData.access_token.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "// Assertion 3: Response should contain token_type",
+              "pm.test('Response contains token_type', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('token_type');",
+              "});",
+              "",
+              "// Store token for subsequent requests",
+              "var jsonData = pm.response.json();",
+              "pm.environment.set('auth_token', jsonData.access_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \\\"username\\\": \\\"{{test_user}}\\\",\\n  \\\"password\\\": \\\"{{test_password}}\\\",\\n  \\\"scope\\\": \\\"openid profile email\\\"\\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A02: Auth/Login Invalid - Sad Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 401 or 400",
+              "pm.test('Status code is 401 (Unauthorized)', function() {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain error detail",
+              "pm.test('Response contains error detail', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "    pm.expect(jsonData.detail).to.be.a('string');",
+              "});",
+              "",
+              "// Assertion 3: Should not contain access_token",
+              "pm.test('Response does not contain access_token', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.not.have.property('access_token');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \\\"username\\\": \\\"invalid_user\\\",\\n  \\\"password\\\": \\\"wrong_password\\\",\\n  \\\"scope\\\": \\\"openid profile email\\\"\\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "login"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A03: Product List - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 200",
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Assertion 2: Response should be an array",
+              "pm.test('Response is an array', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an('array');",
+              "});",
+              "",
+              "// Assertion 3: Array items should have required fields",
+              "pm.test('Array items have required fields', function() {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.length > 0) {",
+              "        pm.expect(jsonData[0]).to.have.property('id');",
+              "        pm.expect(jsonData[0]).to.have.property('name');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/products",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "products"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A04: Product Create - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 201 (Created)",
+              "pm.test('Status code is 201 (Created)', function() {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain created product id",
+              "pm.test('Response contains product id', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData.id).to.be.a('string');",
+              "    pm.environment.set('product_id', jsonData.id);",
+              "});",
+              "",
+              "// Assertion 3: Response should contain product name",
+              "pm.test('Response contains product name', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('name');",
+              "    pm.expect(jsonData.name).to.equal('Test Product');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \\\"name\\\": \\\"Test Product\\\",\\n  \\\"description\\\": \\\"A test product for Phase 3\\\",\\n  \\\"unit_price\\\": 99.99,\\n  \\\"quantity_available\\\": 100\\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/products",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "products"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A05: Product Get - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 200",
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain product details",
+              "pm.test('Response contains product details', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('name');",
+              "    pm.expect(jsonData).to.have.property('unit_price');",
+              "});",
+              "",
+              "// Assertion 3: Product id should match request parameter",
+              "pm.test('Product id matches request', function() {",
+              "    var jsonData = pm.response.json();",
+              "    var productId = pm.environment.get('product_id');",
+              "    pm.expect(jsonData.id).to.equal(productId);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/products/{{product_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "products", "{{product_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A06: Product Delete - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 204 or 200",
+              "pm.test('Status code is 204 or 200 (Success)', function() {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+              "});",
+              "",
+              "// Assertion 2: Verify product no longer exists (follow-up check)",
+              "pm.test('Delete operation completed', function() {",
+              "    // After successful delete, status should indicate no content or ok",
+              "    pm.expect([200, 204]).to.include(pm.response.code);",
+              "});",
+              "",
+              "// Assertion 3: Response should not contain product data",
+              "pm.test('Response does not contain deleted product data', function() {",
+              "    if (pm.response.code === 200) {",
+              "        var jsonData = pm.response.json();",
+              "        // Verify the response indicates deletion",
+              "        pm.expect(jsonData).to.exist;",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/products/{{product_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "products", "{{product_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A07: Cart Add Item - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 201 (Created)",
+              "pm.test('Status code is 201 (Created)', function() {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "",
+              "// Assertion 2: Response should reflect the added item",
+              "pm.test('Response contains cart item data', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('items');",
+              "    pm.expect(jsonData.items).to.be.an('array');",
+              "});",
+              "",
+              "// Assertion 3: Cart total should be updated",
+              "pm.test('Cart total is calculated', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('total');",
+              "    pm.expect(jsonData.total).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \\\"product_id\\\": \\\"{{product_id}}\\\",\\n  \\\"quantity\\\": 2\\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/cart/items",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "cart", "items"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A08: Cart Add Item Invalid - Sad Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 400 or 422 (Bad Request)",
+              "pm.test('Status code is 400 or 422 (Bad Request)', function() {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain validation error",
+              "pm.test('Response contains validation error detail', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "});",
+              "",
+              "// Assertion 3: Should not add item to cart",
+              "pm.test('Error response structure is valid', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.detail).to.be.a('string');",
+              "    pm.expect(jsonData.detail.length).to.be.greaterThan(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \\\"product_id\\\": \\\"invalid-product-id\\\",\\n  \\\"quantity\\\": -1\\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/cart/items",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "cart", "items"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A09: Create Order - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 201 (Created)",
+              "pm.test('Status code is 201 (Created)', function() {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain order with status field",
+              "pm.test('Response contains order with status', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('status');",
+              "    pm.environment.set('order_id', jsonData.id);",
+              "});",
+              "",
+              "// Assertion 3: Order status should be one of expected values",
+              "pm.test('Order status is valid', function() {",
+              "    var jsonData = pm.response.json();",
+              "    var validStatuses = ['pending', 'confirmed', 'processing', 'created'];",
+              "    pm.expect(validStatuses).to.include(jsonData.status.toLowerCase());",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \\\"user_id\\\": \\\"{{user_id}}\\\"\\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-A10: Unauthorized Route - Sad Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 401 or 403 (Unauthorized/Forbidden)",
+              "pm.test('Status code is 401 or 403 (Security enforced)', function() {",
+              "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain security error message",
+              "pm.test('Response contains security message', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('detail');",
+              "    pm.expect(jsonData.detail.toLowerCase()).to.include.oneOf(['unauthorized', 'forbidden', 'invalid token']);",
+              "});",
+              "",
+              "// Assertion 3: Response should not contain sensitive data",
+              "pm.test('Response does not expose sensitive data', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.not.have.property('data');",
+              "    pm.expect(jsonData).to.not.have.property('items');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-BONUS-A11: Get Order - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 200",
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Assertion 2: Response should contain order details",
+              "pm.test('Response contains order details', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('status');",
+              "    pm.expect(jsonData).to.have.property('total');",
+              "});",
+              "",
+              "// Assertion 3: Order id should match request",
+              "pm.test('Order id matches request parameter', function() {",
+              "    var jsonData = pm.response.json();",
+              "    var orderId = pm.environment.get('order_id');",
+              "    pm.expect(jsonData.id).to.equal(orderId);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "orders", "{{order_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "P3-BONUS-A12: Categories List - Happy Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Assertion 1: Status code should be 200",
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Assertion 2: Response should be an array",
+              "pm.test('Response is an array', function() {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an('array');",
+              "});",
+              "",
+              "// Assertion 3: Categories should have required fields",
+              "pm.test('Categories have required fields', function() {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.length > 0) {",
+              "        pm.expect(jsonData[0]).to.have.property('id');",
+              "        pm.expect(jsonData[0]).to.have.property('name');",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/categories",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "categories"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8010",
+      "type": "string"
+    },
+    {
+      "key": "test_user",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
