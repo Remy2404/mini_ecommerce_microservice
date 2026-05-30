@@ -20,7 +20,9 @@ def upgrade() -> None:
         sa.Column("cart_id", sa.String(length=255), nullable=False),
         sa.Column("status", sa.String(length=50), nullable=False),
         sa.Column("total_amount", sa.Numeric(12, 2), nullable=False),
-        sa.Column("currency", sa.String(length=10), nullable=False, server_default="USD"),
+        sa.Column(
+            "currency", sa.String(length=10), nullable=False, server_default="USD"
+        ),
         sa.Column("shipping_address", sa.Text(), nullable=True),
         sa.Column("correlation_id", sa.String(length=255), nullable=False),
         sa.Column(

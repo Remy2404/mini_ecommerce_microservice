@@ -251,7 +251,9 @@ async def list_order_statuses(user_id: str | None = None) -> dict[str, str]:
         query = select(Order)
         if user_id is not None:
             query = query.where(Order.user_id == user_id)
-        result = await session.execute(query.order_by(Order.created_at.desc(), Order.id.desc()))
+        result = await session.execute(
+            query.order_by(Order.created_at.desc(), Order.id.desc())
+        )
         orders = result.scalars().all()
 
     return {str(order.id): str(order.status) for order in orders}

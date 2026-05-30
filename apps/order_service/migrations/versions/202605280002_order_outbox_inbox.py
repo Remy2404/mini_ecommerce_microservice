@@ -21,7 +21,9 @@ def upgrade() -> None:
         sa.Column("payload", postgresql.JSONB(), nullable=False),
         sa.Column("correlation_id", sa.String(length=255), nullable=True),
         sa.Column("trace_id", sa.String(length=255), nullable=True),
-        sa.Column("status", sa.String(length=40), nullable=False, server_default="PENDING"),
+        sa.Column(
+            "status", sa.String(length=40), nullable=False, server_default="PENDING"
+        ),
         sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.Column("next_attempt_at", sa.DateTime(timezone=True), nullable=True),
@@ -42,7 +44,9 @@ def upgrade() -> None:
     op.create_index("ix_order_outbox_event_type", "outbox_events", ["event_type"])
     op.create_index("ix_order_outbox_routing_key", "outbox_events", ["routing_key"])
     op.create_index("ix_order_outbox_status", "outbox_events", ["status"])
-    op.create_index("ix_order_outbox_correlation_id", "outbox_events", ["correlation_id"])
+    op.create_index(
+        "ix_order_outbox_correlation_id", "outbox_events", ["correlation_id"]
+    )
 
     op.create_table(
         "inbox_events",

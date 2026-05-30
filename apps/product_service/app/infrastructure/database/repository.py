@@ -101,9 +101,7 @@ async def list_products() -> list[ProductResponse]:
 async def list_categories() -> list[CategoryResponse]:
     async with session_scope(settings.products_database_url) as session:
         result = await session.execute(
-            select(Category)
-            .where(Category.is_active.is_(True))
-            .order_by(Category.name)
+            select(Category).where(Category.is_active.is_(True)).order_by(Category.name)
         )
         categories = result.scalars().all()
 

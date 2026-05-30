@@ -121,7 +121,9 @@ async def forward_request(
                 method=request.method,
                 url=url,
                 headers=headers,
-                content=body_override if body_override is not None else await request.body(),
+                content=body_override
+                if body_override is not None
+                else await request.body(),
                 params=request.query_params,
             )
     except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError):

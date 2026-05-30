@@ -84,7 +84,7 @@ class ObjectStorageClient:
             return None
 
         safe_key = quote(object_key)
-        return f'{self._settings.object_storage_public_base_url.rstrip("/")}/{safe_key}'
+        return f"{self._settings.object_storage_public_base_url.rstrip('/')}/{safe_key}"
 
     def create_presigned_get_url(self, object_key: str) -> str:
         try:

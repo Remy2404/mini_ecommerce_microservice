@@ -5,7 +5,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
 from packages.config.settings import settings
-from packages.security.jwt_validator import AuthProviderUnavailableError, TokenValidationError
+from packages.security.jwt_validator import (
+    AuthProviderUnavailableError,
+    TokenValidationError,
+)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 _jwks_cache: dict = {}
