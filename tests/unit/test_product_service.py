@@ -51,6 +51,22 @@ def test_create_product_endpoint_success() -> None:
     assert body["data"]["name"] == "Test Product"
 
 
+def test_create_product_endpoint_invalid_payload_returns_422() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/products",
+            json={
+                "name": "",
+                "description": "Invalid",
+                "price": -1,
+                "stock_quantity": -5,
+                "category": "",
+            },
+        )
+
+    assert response.status_code == 422
+
+
 def test_list_products_endpoint_success() -> None:
     product_id_1 = uuid4()
     product_id_2 = uuid4()
