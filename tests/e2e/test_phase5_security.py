@@ -12,9 +12,7 @@ Test Scenario Coverage:
 - P5-S08: Error response leakage
 """
 
-import asyncio
 import json
-from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import httpx
@@ -28,7 +26,6 @@ from apps.api_gateway.app.infrastructure.http import proxy_client
 from apps.api_gateway.app.infrastructure.security import wso2_client
 from apps.api_gateway.app.main import app as gateway_app
 from apps.cart_service.app.main import app as cart_app
-from apps.cart_service.app.schemas import AddCartItemRequest
 from packages.config.settings import settings
 from packages.security.jwt_validator import TokenValidationError
 
@@ -561,6 +558,9 @@ def test_p5_s08_auth_error_no_user_enumeration(
         "Auth error should not reveal user enumeration info"
     )
     assert "username" not in msg1_str, "Auth error should not contain username hints"
+    assert "user" not in msg2_str or "user_not_found" not in msg2_str, (
+        "Auth error response 2 should not reveal user enumeration info"
+    )
 
 
 # ============================================================================
