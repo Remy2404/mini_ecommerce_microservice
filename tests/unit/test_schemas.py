@@ -1,6 +1,10 @@
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
+from pydantic import ValidationError
+
+from apps.product_service.app.schemas.requests import CreateProductRequest
 from packages.contracts.schemas import ApiResponse, OrderResponse, OrderStatus
 
 
@@ -27,3 +31,14 @@ def test_api_response_schema():
 
     assert response.success is True
     assert response.data == {"status": "ok"}
+
+
+def test_create_product_request_rejects_negative_price() -> None:
+    with pytest.raises(ValidationError):
+        CreateProductRequest(
+            name="Test Product",
+            description=None,
+            price=Decimal("-0.01"),
+            stock_quantity=1,
+            category="books",
+        )
