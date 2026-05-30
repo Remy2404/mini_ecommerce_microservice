@@ -25,6 +25,12 @@ Install uv :
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
+Check uv version :
+
+```powershell
+uv --version
+```
+
 Create a virtual environment and activate it:
 
 ```powershell
