@@ -30,9 +30,9 @@ __all__ = [
 ]
 
 
-async def add_item_to_cart(request: AddCartItemRequest) -> CartResponse:
+async def add_item_to_cart(user_id: str, request: AddCartItemRequest) -> CartResponse:
     product = await fetch_product(request.product_id)
-    cart = get_cart(request.user_id)
+    cart = get_cart(user_id)
 
     items = list(cart.items)
     existing_item_index = next(
@@ -72,7 +72,7 @@ async def add_item_to_cart(request: AddCartItemRequest) -> CartResponse:
     )
 
     updated_cart = CartResponse(
-        user_id=request.user_id,
+        user_id=user_id,
         items=items,
         total_amount=total_amount,
     )

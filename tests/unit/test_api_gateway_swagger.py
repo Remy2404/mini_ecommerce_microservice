@@ -1,10 +1,14 @@
+import json
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from packages.config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
+from packages.config.settings import settings
+from packages.security import wso2_login
+from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 
 
 class FakeAsyncClient:
@@ -64,9 +68,23 @@ def _configure_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeAsyncClient)
     monkeypatch.setattr(settings, "gateway_auth_enabled", False)
     monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(settings, "auth_service_url", "http://auth-service")
     monkeypatch.setattr(settings, "product_service_url", "http://product-service")
     monkeypatch.setattr(settings, "cart_service_url", "http://cart-service")
     monkeypatch.setattr(settings, "order_service_url", "http://order-service")
+    monkeypatch.setattr(settings, "payment_service_url", "http://payment-service")
+
+
+def _request_body_schema(openapi_schema: dict, path: str) -> dict:
+    schema = openapi_schema["paths"][path]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["schema"]
+    ref = schema.get("$ref")
+    if ref is None:
+        return schema
+
+    schema_name = ref.rsplit("/", 1)[-1]
+    return openapi_schema["components"]["schemas"][schema_name]
 
 
 def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
@@ -77,8 +95,15 @@ def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
 
     assert "/api/v1/{service}{path}" not in paths
     assert "/api/v1/{service}/{path}" not in paths
+    assert "/auth/login" not in paths
+    assert "/internal/wso2/login" not in paths
 
     expected_routes = {
+        ("/api/v1/auth/register", "post", "WSO2 Gateway"),
+        ("/api/v1/auth/login", "post", "WSO2 Gateway"),
+        ("/api/v1/auth/users", "get", "WSO2 Gateway"),
+        ("/api/v1/auth/users/search", "get", "WSO2 Gateway"),
+        ("/api/v1/auth/users/{user_id}", "get", "WSO2 Gateway"),
         ("/api/v1/products", "get", "Product Gateway"),
         ("/api/v1/products", "post", "Product Gateway"),
         ("/api/v1/products/{product_id}", "get", "Product Gateway"),
@@ -89,12 +114,127 @@ def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
         ("/api/v1/orders", "get", "Order Gateway"),
         ("/api/v1/orders", "post", "Order Gateway"),
         ("/api/v1/orders/{order_id}", "get", "Order Gateway"),
-        ("/auth/login", "post", "WSO2 Auth"),
     }
 
     for path, method, tag in expected_routes:
         assert method in paths[path]
         assert paths[path][method]["tags"] == [tag]
+
+    operation_tags = {
+        tag
+        for path_item in paths.values()
+        for operation in path_item.values()
+        for tag in operation.get("tags", [])
+    }
+    assert "WSO2 Gateway" in operation_tags
+    assert "Auth Gateway" not in operation_tags
+    assert "WSO2 Auth" not in operation_tags
+    assert "/api/v1/auth/addresses" not in paths
+
+
+def test_openapi_documents_auth_register_and_wso2_login_responses() -> None:
+    with TestClient(app) as client:
+        schema = client.get("/openapi.json").json()
+
+    register_operation = schema["paths"]["/api/v1/auth/register"]["post"]
+    login_operation = schema["paths"]["/api/v1/auth/login"]["post"]
+
+    assert "201" in register_operation["responses"]
+    assert "503" in register_operation["responses"]
+    assert "200" not in register_operation["responses"]
+    assert (
+        "Creates a WSO2 Identity Server user through SCIM2"
+        in register_operation["description"]
+    )
+
+    login_success_ref = login_operation["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]["$ref"]
+    login_success_schema = schema["components"]["schemas"][
+        login_success_ref.rsplit("/", 1)[-1]
+    ]
+
+    assert {"access_token", "token_type"} <= set(login_success_schema["properties"])
+    assert "401" in login_operation["responses"]
+    assert "503" in login_operation["responses"]
+    assert "502" not in login_operation["responses"]
+    assert "Use the WSO2 username" in login_operation["description"]
+
+
+def test_openapi_documents_wso2_user_routes() -> None:
+    with TestClient(app) as client:
+        schema = client.get("/openapi.json").json()
+
+    list_operation = schema["paths"]["/api/v1/auth/users"]["get"]
+    search_operation = schema["paths"]["/api/v1/auth/users/search"]["get"]
+    detail_operation = schema["paths"]["/api/v1/auth/users/{user_id}"]["get"]
+
+    list_params = {param["name"] for param in list_operation["parameters"]}
+    search_params = {param["name"] for param in search_operation["parameters"]}
+    detail_params = {param["name"] for param in detail_operation["parameters"]}
+
+    assert {
+        "filter",
+        "attributes",
+        "excludedAttributes",
+        "startIndex",
+        "count",
+    } <= list_params
+    assert {"q", "startIndex", "count"} <= search_params
+    assert "user_id" in detail_params
+    assert "403" in list_operation["responses"]
+    assert "404" in detail_operation["responses"]
+
+    list_success_ref = list_operation["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]["$ref"]
+    detail_success_ref = detail_operation["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]["$ref"]
+    assert list_success_ref.endswith("/GatewayWso2UsersListResponse")
+    assert detail_success_ref.endswith("/GatewayWso2UserDetailResponse")
+
+
+def test_openapi_documents_gateway_post_request_body_fields() -> None:
+    with TestClient(app) as client:
+        schema = client.get("/openapi.json").json()
+
+    expected_request_bodies = {
+        "/api/v1/auth/register": (
+            {"username", "email", "password", "first_name", "last_name"},
+            {"username", "email", "password", "first_name", "last_name"},
+        ),
+        "/api/v1/auth/login": (
+            {"username", "password", "scope"},
+            {"username", "password"},
+        ),
+        "/api/v1/categories": (
+            {"name", "description"},
+            {"name"},
+        ),
+        "/api/v1/products": (
+            {"name", "description", "price", "stock_quantity", "category"},
+            {"name", "price", "stock_quantity", "category"},
+        ),
+        "/api/v1/cart/items": (
+            {"product_id", "quantity"},
+            {"product_id", "quantity"},
+        ),
+        "/api/v1/orders": (
+            set(),
+            set(),
+        ),
+    }
+
+    for path, (properties, required) in expected_request_bodies.items():
+        operation = schema["paths"][path]["post"]
+        media_type = operation["requestBody"]["content"]["application/json"]
+        request_schema = _request_body_schema(schema, path)
+
+        assert operation["requestBody"]["required"] is True
+        assert properties <= set(request_schema["properties"])
+        assert required <= set(request_schema.get("required", []))
+        assert "example" in media_type or "example" in request_schema
 
 
 def test_wso2_login_uses_password_grant(monkeypatch) -> None:
@@ -110,9 +250,7 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
         },
     )
 
-    from apps.api_gateway.app.api.routes import auth_routes
-
-    monkeypatch.setattr(auth_routes.httpx, "AsyncClient", FakeWSO2AsyncClient)
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
     monkeypatch.setattr(settings, "wso2_token_url", "https://wso2.local/oauth2/token")
     monkeypatch.setattr(settings, "wso2_client_id", "local-client-id")
     monkeypatch.setattr(settings, "wso2_client_secret", "local-client-secret")
@@ -121,7 +259,7 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
 
     with TestClient(app) as client:
         response = client.post(
-            "/auth/login",
+            "/api/v1/auth/login",
             json={
                 "username": "admin",
                 "password": "admin",
@@ -146,18 +284,44 @@ def test_wso2_login_uses_password_grant(monkeypatch) -> None:
     assert FakeWSO2AsyncClient.init_kwargs == [{"timeout": 7.5, "verify": False}]
 
 
+def test_wso2_login_preserves_special_characters_in_password(monkeypatch) -> None:
+    FakeWSO2AsyncClient.calls = []
+    FakeWSO2AsyncClient.init_kwargs = []
+    FakeWSO2AsyncClient.response = httpx.Response(
+        200,
+        json={
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+        },
+    )
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": "temporary$#Password!",
+            },
+        )
+
+    assert response.status_code == 200
+    assert FakeWSO2AsyncClient.calls[0]["data"]["password"] == "temporary$#Password!"
+
+
 def test_wso2_login_invalid_credentials_return_safe_401(monkeypatch) -> None:
     FakeWSO2AsyncClient.calls = []
     FakeWSO2AsyncClient.init_kwargs = []
     FakeWSO2AsyncClient.response = httpx.Response(401, json={"error": "invalid_grant"})
 
-    from apps.api_gateway.app.api.routes import auth_routes
-
-    monkeypatch.setattr(auth_routes.httpx, "AsyncClient", FakeWSO2AsyncClient)
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
 
     with TestClient(app) as client:
         response = client.post(
-            "/auth/login",
+            "/api/v1/auth/login",
             json={"username": "admin", "password": "wrong"},
         )
 
@@ -165,9 +329,74 @@ def test_wso2_login_invalid_credentials_return_safe_401(monkeypatch) -> None:
     assert response.json() == {"detail": "Invalid username or password"}
 
 
+def test_wso2_login_client_configuration_errors_return_safe_503(monkeypatch) -> None:
+    FakeWSO2AsyncClient.calls = []
+    FakeWSO2AsyncClient.init_kwargs = []
+    FakeWSO2AsyncClient.response = httpx.Response(401, json={"error": "invalid_client"})
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
+
+
+def test_wso2_login_unknown_upstream_errors_return_safe_503(monkeypatch) -> None:
+    FakeWSO2AsyncClient.calls = []
+    FakeWSO2AsyncClient.init_kwargs = []
+    FakeWSO2AsyncClient.response = httpx.Response(
+        400,
+        json={"error": "unexpected_wso2_error"},
+    )
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", FakeWSO2AsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
+
+
+def test_wso2_login_timeout_or_unavailable_returns_safe_503(monkeypatch) -> None:
+    class RaisingAsyncClient(FakeWSO2AsyncClient):
+        async def post(self, url: str, **kwargs) -> httpx.Response:
+            raise httpx.ConnectTimeout("timeout")
+
+    monkeypatch.setattr(wso2_login.httpx, "AsyncClient", RaisingAsyncClient)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "wrong"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Authentication service unavailable"}
+
+
 @pytest.mark.parametrize(
     ("method", "path", "expected_url"),
     [
+        ("GET", "/api/v1/auth/users?count=10", "http://auth-service/auth/users"),
+        (
+            "GET",
+            "/api/v1/auth/users/search?q=admin",
+            "http://auth-service/auth/users/search",
+        ),
+        (
+            "GET",
+            "/api/v1/auth/users/wso2-user-123",
+            "http://auth-service/auth/users/wso2-user-123",
+        ),
         ("GET", "/api/v1/products", "http://product-service/products"),
         (
             "GET",
@@ -202,6 +431,31 @@ def test_explicit_get_and_delete_routes_proxy_correctly(
 
 
 @pytest.mark.parametrize(
+    ("path", "expected_params"),
+    [
+        (
+            "/api/v1/auth/users?count=10&startIndex=2",
+            {"count": "10", "startIndex": "2"},
+        ),
+        ("/api/v1/auth/users/search?q=admin&count=5", {"q": "admin", "count": "5"}),
+    ],
+)
+def test_wso2_user_routes_forward_query_params(
+    monkeypatch: pytest.MonkeyPatch,
+    path: str,
+    expected_params: dict[str, str],
+) -> None:
+    _configure_gateway(monkeypatch)
+
+    with TestClient(app) as client:
+        response = client.get(path)
+
+    assert response.status_code == 200
+    forwarded_params = dict(FakeAsyncClient.calls[0]["params"])
+    assert expected_params.items() <= forwarded_params.items()
+
+
+@pytest.mark.parametrize(
     ("path", "payload", "expected_url"),
     [
         ("/api/v1/products", b'{"name":"Hat"}', "http://product-service/products"),
@@ -210,7 +464,7 @@ def test_explicit_get_and_delete_routes_proxy_correctly(
             b'{"product_id":"product_123"}',
             "http://cart-service/cart/items",
         ),
-        ("/api/v1/orders", b'{"user_id":"user_123"}', "http://order-service/orders"),
+        ("/api/v1/orders", b"{}", "http://order-service/orders"),
     ],
 )
 def test_explicit_post_routes_forward_raw_body_and_headers(
@@ -238,10 +492,36 @@ def test_explicit_post_routes_forward_raw_body_and_headers(
     forwarded_headers = httpx.Headers(call["headers"])
     assert call["method"] == "POST"
     assert call["url"] == expected_url
-    assert call["content"] == payload
+    if path in {"/api/v1/cart/items", "/api/v1/orders"}:
+        assert json.loads(call["content"]) == json.loads(payload)
+        assert forwarded_headers[AUTHENTICATED_USER_ID_HEADER] == "local-demo"
+    else:
+        assert call["content"] == payload
     assert forwarded_headers["authorization"] == "Bearer test-token"
     assert forwarded_headers["x-request-id"] == "request-123"
     assert (
         forwarded_headers["traceparent"]
         == "00-00000000000000000000000000000000-0000000000000000-01"
     )
+
+
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/api/v1/cart/items", b'{"user_id":"attacker","product_id":"product_123"}'),
+        ("/api/v1/orders", b'{"user_id":"attacker"}'),
+    ],
+)
+def test_user_owned_post_routes_reject_client_supplied_user_id(
+    monkeypatch: pytest.MonkeyPatch,
+    path: str,
+    payload: bytes,
+) -> None:
+    _configure_gateway(monkeypatch)
+
+    with TestClient(app) as client:
+        response = client.post(path, content=payload)
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Forbidden"}
+    assert FakeAsyncClient.calls == []

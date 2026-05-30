@@ -34,6 +34,11 @@ RESPONSE_HEADERS_TO_DROP = HOP_BY_HOP_HEADERS | {
     "content-length",
 }
 
+SAFE_DOWNSTREAM_ERROR_DETAILS = {
+    "Authentication service unavailable",
+    "WSO2 registration configuration error",
+}
+
 
 def _get_base_url(service: str) -> str | None:
     setting_name = SERVICE_MAP.get(service)
@@ -70,7 +75,30 @@ def _forward_response_headers(upstream: httpx.Response) -> dict[str, str]:
     }
 
 
-async def forward_request(service_name: str, path: str, request: Request) -> Response:
+def _safe_downstream_error(upstream: httpx.Response) -> dict[str, str] | None:
+    try:
+        body = upstream.json()
+    except ValueError:
+        return None
+
+    if not isinstance(body, dict):
+        return None
+
+    detail = body.get("detail")
+    if isinstance(detail, str) and detail in SAFE_DOWNSTREAM_ERROR_DETAILS:
+        return {"detail": detail}
+
+    return None
+
+
+async def forward_request(
+    service_name: str,
+    path: str,
+    request: Request,
+    *,
+    body_override: bytes | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> Response:
     """Forward a gateway request to the configured downstream service."""
     base_url = _get_base_url(service_name)
     if not base_url:
@@ -81,6 +109,10 @@ async def forward_request(service_name: str, path: str, request: Request) -> Res
 
     url = _build_downstream_url(base_url, service_name, path)
 
+    headers = _forward_request_headers(request)
+    if extra_headers:
+        headers.update(extra_headers)
+
     try:
         async with httpx.AsyncClient(
             timeout=settings.gateway_request_timeout_seconds,
@@ -88,8 +120,8 @@ async def forward_request(service_name: str, path: str, request: Request) -> Res
             upstream = await client.request(
                 method=request.method,
                 url=url,
-                headers=_forward_request_headers(request),
-                content=await request.body(),
+                headers=headers,
+                content=body_override if body_override is not None else await request.body(),
                 params=request.query_params,
             )
     except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError):
@@ -104,6 +136,13 @@ async def forward_request(service_name: str, path: str, request: Request) -> Res
         )
 
     if upstream.status_code >= 500:
+        safe_error = _safe_downstream_error(upstream)
+        if safe_error is not None:
+            return JSONResponse(
+                status_code=upstream.status_code,
+                content=safe_error,
+            )
+
         return JSONResponse(
             status_code=upstream.status_code,
             content={"detail": "Downstream service error"},

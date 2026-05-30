@@ -35,6 +35,127 @@
 				"."
 			],
 			"isBackground": false
+		},
+		{
+			"label": "verify-swagger-openapi",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"python",
+				"-c",
+				"import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8010/openapi.json')); paths=data['paths']; print('HAS_WSO2_GATEWAY', any('WSO2 Gateway' in op.get('tags', []) for p in paths.values() for op in p.values())); print('WSO2_GATEWAY_LOGIN', paths.get('/api/v1/auth/login', {}).get('post', {}).get('tags')); print('HAS_ROOT_AUTH_LOGIN', '/auth/login' in paths); print('HAS_INTERNAL_LOGIN', '/internal/wso2/login' in paths)"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "ruff-check-temp",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"ruff",
+				"check",
+				"."
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "pytest-temp",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"-q"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "pytest-temp-2",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"-q"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "pytest-temp-2",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"-q"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "validate-auth-service-tests",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"apps/auth_service/tests/unit/test_auth_service.py",
+				"-q"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "validate-auth-service-tests-2",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"apps/auth_service/tests/unit/test_auth_service.py",
+				"-q"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
+		},
+		{
+			"label": "pytest-auth-service-temp",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"pytest",
+				"apps/auth_service/tests/unit/test_auth_service.py",
+				"-q"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$pytest"
+			],
+			"group": "test"
 		}
 	]
 }

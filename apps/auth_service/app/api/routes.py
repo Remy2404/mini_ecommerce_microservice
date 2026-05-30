@@ -1,34 +1,30 @@
 """Auth Service routes."""
 
-from uuid import UUID
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from apps.auth_service.app.api.dependencies import get_current_token_payload
 from apps.auth_service.app.application.services import AuthService, get_auth_service
-from apps.auth_service.app.domain.exceptions import (
-    AddressNotFoundError,
-    InvalidCredentialsError,
-    RoleNotFoundError,
-    UserAlreadyExistsError,
-    UserNotFoundError,
-)
-from apps.auth_service.app.schemas.requests import (
-    AssignRoleRequest,
-    CreateAddressRequest,
-    CreateRoleRequest,
-    LoginRequest,
-    RegisterUserRequest,
-)
+from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import (
-    AddressResponse,
-    RoleResponse,
-    UserProfileResponse,
+    RegisterUserResponse,
+    Wso2UserDetailResponse,
+    Wso2UsersListResponse,
 )
+from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
 from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
+from packages.observability.logging import get_logger
+from packages.security.wso2_login import request_wso2_password_token
+from packages.security.wso2_scim import (
+    WSO2SCIMError,
+    filter_wso2_users,
+    get_wso2_user_by_id,
+    search_wso2_users,
+)
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get("/health")
@@ -36,15 +32,34 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.auth_service_name}
 
 
-@router.post("/auth/register", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/auth/register",
+    response_model=ApiResponse[RegisterUserResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Register user with WSO2",
+    description="Creates a new user in WSO2 Identity Server using SCIM2.",
+)
 async def register_user(
-    request: RegisterUserRequest,
+    request: Request,
+    payload: RegisterUserRequest,
     service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[UserProfileResponse]:
+) -> ApiResponse[RegisterUserResponse]:
+    request_id = request.headers.get("x-request-id")
     try:
-        user = await service.register_user(request)
-    except UserAlreadyExistsError as exc:
-        raise HTTPException(status_code=409, detail="User already exists") from exc
+        user = await service.register_user(payload, request_id=request_id)
+    except WSO2SCIMError as exc:
+        logger.error(
+            "WSO2 user registration failed",
+            request_id=request_id,
+            target_url=exc.target_url,
+            status_code=exc.status_code,
+            error_type=exc.error_type,
+            wso2_error_code=exc.wso2_error_code,
+        )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.message,
+        ) from exc
 
     return ApiResponse(
         success=True,
@@ -53,100 +68,150 @@ async def register_user(
     )
 
 
-@router.post("/auth/login")
-async def login_user(
-    request: LoginRequest,
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[dict[str, str]]:
-    try:
-        await service.login_user(request)
-    except InvalidCredentialsError as exc:
-        raise HTTPException(status_code=401, detail="Invalid credentials") from exc
+# ---------------------------------------------------------------------------
+# WSO2 SCIM2 user query routes
+# ---------------------------------------------------------------------------
 
-    raise HTTPException(
-        status_code=status.HTTP_410_GONE,
-        detail=(
-            "Auth Service local login is removed. "
-            "Use API Gateway /auth/login with WSO2 instead."
-        ),
+
+@router.get(
+    "/auth/users",
+    response_model=ApiResponse[Wso2UsersListResponse],
+    summary="Filter/list users from WSO2",
+    description="Proxies to WSO2 SCIM2 GET /scim2/Users. Scope: internal_user_mgt_list.",
+)
+async def list_users(
+    request: Request,
+    filter_: str | None = Query(
+        default=None,
+        alias="filter",
+        description="SCIM2 filter expression",
+    ),
+    attributes: str | None = Query(
+        default=None,
+        description="Comma-separated attributes to include",
+    ),
+    excluded_attributes: str | None = Query(
+        default=None,
+        alias="excludedAttributes",
+        description="Comma-separated attributes to exclude",
+    ),
+    start_index: int = Query(default=1, ge=1, alias="startIndex"),
+    count: int = Query(default=25, ge=1, le=100),
+    domain: str | None = Query(default=None, description="WSO2 user store domain"),
+) -> ApiResponse[Wso2UsersListResponse]:
+    request_id = request.headers.get("x-request-id")
+    try:
+        result = await filter_wso2_users(
+            filter_query=filter_,
+            attributes=attributes,
+            excluded_attributes=excluded_attributes,
+            start_index=start_index,
+            count=count,
+            domain=domain,
+            request_id=request_id,
+        )
+    except WSO2SCIMError as exc:
+        logger.error(
+            "WSO2 user list failed",
+            request_id=request_id,
+            target_url=exc.target_url,
+            status_code=exc.status_code,
+            error_type=exc.error_type,
+        )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.message,
+        ) from exc
+
+    return ApiResponse(
+        success=True,
+        message="Users retrieved successfully",
+        data=Wso2UsersListResponse(**result),
     )
 
 
-@router.get("/auth/me")
-async def get_me(
-    token_payload: dict = Depends(get_current_token_payload),
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[UserProfileResponse]:
+@router.get(
+    "/auth/users/search",
+    response_model=ApiResponse[Wso2UsersListResponse],
+    summary="Search users by keyword",
+    description="Safe search wrapper that builds a SCIM2 filter from a keyword. Scope: internal_user_mgt_list.",
+)
+async def search_users_route(
+    request: Request,
+    q: str = Query(min_length=1, max_length=255, description="Search term"),
+    start_index: int = Query(default=1, ge=1, alias="startIndex"),
+    count: int = Query(default=25, ge=1, le=100),
+) -> ApiResponse[Wso2UsersListResponse]:
+    request_id = request.headers.get("x-request-id")
     try:
-        user = await service.get_user_profile(UUID(token_payload["sub"]))
-    except (ValueError, UserNotFoundError) as exc:
-        raise HTTPException(status_code=404, detail="User not found") from exc
+        result = await search_wso2_users(
+            query=q,
+            start_index=start_index,
+            count=count,
+            request_id=request_id,
+        )
+    except WSO2SCIMError as exc:
+        logger.error(
+            "WSO2 user search failed",
+            request_id=request_id,
+            target_url=exc.target_url,
+            status_code=exc.status_code,
+            error_type=exc.error_type,
+        )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.message,
+        ) from exc
 
-    return ApiResponse(success=True, message="User profile fetched successfully", data=user)
+    return ApiResponse(
+        success=True,
+        message="Search results retrieved successfully",
+        data=Wso2UsersListResponse(**result),
+    )
 
 
-@router.post("/auth/addresses", status_code=status.HTTP_201_CREATED)
-async def create_address(
-    request: CreateAddressRequest,
-    token_payload: dict = Depends(get_current_token_payload),
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[AddressResponse]:
-    address = await service.create_address(UUID(token_payload["sub"]), request)
-    return ApiResponse(success=True, message="Address created successfully", data=address)
-
-
-@router.get("/auth/addresses")
-async def list_addresses(
-    token_payload: dict = Depends(get_current_token_payload),
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[list[AddressResponse]]:
-    addresses = await service.list_addresses(UUID(token_payload["sub"]))
-    return ApiResponse(success=True, message="Addresses fetched successfully", data=addresses)
-
-
-@router.delete("/auth/addresses/{address_id}")
-async def delete_address(
-    address_id: UUID,
-    token_payload: dict = Depends(get_current_token_payload),
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[dict[str, str]]:
+@router.get(
+    "/auth/users/{user_id}",
+    response_model=ApiResponse[Wso2UserDetailResponse],
+    summary="Get user by WSO2 SCIM ID",
+    description="Fetches a single user from WSO2 by SCIM2 user ID. Scope: internal_user_mgt_view.",
+)
+async def get_user_by_id_route(
+    request: Request,
+    user_id: str,
+) -> ApiResponse[Wso2UserDetailResponse]:
+    request_id = request.headers.get("x-request-id")
     try:
-        await service.delete_address(UUID(token_payload["sub"]), address_id)
-    except AddressNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Address not found") from exc
+        user = await get_wso2_user_by_id(user_id, request_id=request_id)
+    except WSO2SCIMError as exc:
+        logger.error(
+            "WSO2 user lookup failed",
+            request_id=request_id,
+            target_url=exc.target_url,
+            status_code=exc.status_code,
+            error_type=exc.error_type,
+        )
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.message,
+        ) from exc
 
-    return ApiResponse(success=True, message="Address deleted successfully", data={"id": str(address_id)})
-
-
-@router.post("/auth/roles", status_code=status.HTTP_201_CREATED)
-async def create_role(
-    request: CreateRoleRequest,
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[RoleResponse]:
-    role = await service.create_role(request)
-    return ApiResponse(success=True, message="Role created successfully", data=role)
-
-
-@router.post("/auth/users/{user_id}/roles")
-async def assign_role(
-    user_id: UUID,
-    request: AssignRoleRequest,
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[list[RoleResponse]]:
-    try:
-        roles = await service.assign_role(user_id, request.role_name)
-    except UserNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="User not found") from exc
-    except RoleNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Role not found") from exc
-
-    return ApiResponse(success=True, message="Role assigned successfully", data=roles)
+    return ApiResponse(
+        success=True,
+        message="User retrieved successfully",
+        data=Wso2UserDetailResponse(**user),
+    )
 
 
-@router.get("/auth/users/{user_id}/roles")
-async def list_user_roles(
-    user_id: UUID,
-    service: AuthService = Depends(get_auth_service),
-) -> ApiResponse[list[RoleResponse]]:
-    roles = await service.list_roles(user_id)
-    return ApiResponse(success=True, message="Roles fetched successfully", data=roles)
+# ---------------------------------------------------------------------------
+# Internal / hidden endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/internal/wso2/login", include_in_schema=False)
+async def login_user(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
+    return await request_wso2_password_token(
+        username=request.username,
+        password=request.password.get_secret_value(),
+        scope=request.scope,
+    )

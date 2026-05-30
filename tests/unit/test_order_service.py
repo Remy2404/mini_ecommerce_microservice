@@ -4,9 +4,12 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from packages.config.settings import settings
 from apps.order_service.app.application import services as order_services
 from apps.order_service.app.main import app
+from packages.config.settings import settings
+from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+
+OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}
 
 
 def test_health_endpoint_returns_ok() -> None:
@@ -53,7 +56,7 @@ def test_create_order_endpoint_returns_created_order() -> None:
         ) as save_order_with_outbox_mock,
     ):
         with TestClient(app) as client:
-            response = client.post("/orders", json={"user_id": "user_123"})
+            response = client.post("/orders", json={}, headers=OWNER_HEADERS)
 
     assert response.status_code == 201
 
@@ -117,7 +120,7 @@ def test_create_order_cart_not_found() -> None:
         ),
     ):
         with TestClient(app) as client:
-            response = client.post("/orders", json={"user_id": "user_123"})
+            response = client.post("/orders", json={}, headers=OWNER_HEADERS)
 
     assert response.status_code == 400
     body = response.json()
@@ -140,7 +143,7 @@ def test_create_order_cart_empty() -> None:
         ),
     ):
         with TestClient(app) as client:
-            response = client.post("/orders", json={"user_id": "user_123"})
+            response = client.post("/orders", json={}, headers=OWNER_HEADERS)
 
     assert response.status_code == 400
     body = response.json()
@@ -160,7 +163,7 @@ def test_get_order_success() -> None:
         ),
     ):
         with TestClient(app) as client:
-            response = client.get("/orders/order_123")
+            response = client.get("/orders/order_123", headers=OWNER_HEADERS)
 
     assert response.status_code == 200
     body = response.json()
@@ -182,7 +185,7 @@ def test_get_order_not_found() -> None:
         ),
     ):
         with TestClient(app) as client:
-            response = client.get("/orders/order_123")
+            response = client.get("/orders/order_123", headers=OWNER_HEADERS)
 
     assert response.status_code == 404
     body = response.json()
@@ -204,7 +207,7 @@ def test_list_orders() -> None:
         ),
     ):
         with TestClient(app) as client:
-            response = client.get("/orders")
+            response = client.get("/orders", headers=OWNER_HEADERS)
 
     assert response.status_code == 200
     body = response.json()

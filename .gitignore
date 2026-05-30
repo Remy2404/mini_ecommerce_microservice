@@ -12,3 +12,4 @@ wheels/
 venv/
 .codegraph
 certs
+doc_team

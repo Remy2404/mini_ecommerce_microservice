@@ -11,11 +11,3 @@ class UserNotFoundError(Exception):
 
 class InvalidCredentialsError(Exception):
     """Raised when login credentials are invalid."""
-
-
-class AddressNotFoundError(Exception):
-    """Raised when an address does not belong to the user."""
-
-
-class RoleNotFoundError(Exception):
-    """Raised when a requested role does not exist."""

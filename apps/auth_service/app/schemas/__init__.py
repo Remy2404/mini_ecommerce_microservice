@@ -1,27 +1,19 @@
 """Auth Service request and response DTOs."""
 
-from apps.auth_service.app.schemas.requests import (
-    AssignRoleRequest,
-    CreateAddressRequest,
-    CreateRoleRequest,
-    LoginRequest,
-    RegisterUserRequest,
-)
+from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import (
-    AddressResponse,
-    AuthTokenResponse,
-    RoleResponse,
-    UserProfileResponse,
+    RegisterUserResponse,
+    Wso2UserName,
+    Wso2UserDetailResponse,
+    Wso2UserProfile,
+    Wso2UsersListResponse,
 )
 
 __all__ = [
-    "AddressResponse",
-    "AssignRoleRequest",
-    "AuthTokenResponse",
-    "CreateAddressRequest",
-    "CreateRoleRequest",
-    "LoginRequest",
     "RegisterUserRequest",
-    "RoleResponse",
-    "UserProfileResponse",
+    "RegisterUserResponse",
+    "Wso2UserName",
+    "Wso2UserDetailResponse",
+    "Wso2UserProfile",
+    "Wso2UsersListResponse",
 ]

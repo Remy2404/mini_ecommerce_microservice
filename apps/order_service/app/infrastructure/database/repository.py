@@ -27,6 +27,13 @@ class PendingOutboxEvent:
     attempts: int
 
 
+@dataclass(frozen=True)
+class OrderRecord:
+    order_id: UUID
+    user_id: str
+    status: str
+
+
 async def save_order(
     *,
     order_id: UUID,
@@ -225,11 +232,26 @@ async def get_order_status_by_id(order_id: UUID) -> str | None:
     return str(order.status) if order else None
 
 
-async def list_order_statuses() -> dict[str, str]:
+async def get_order_record_by_id(order_id: UUID) -> OrderRecord | None:
     async with session_scope(settings.orders_database_url) as session:
-        result = await session.execute(
-            select(Order).order_by(Order.created_at.desc(), Order.id.desc())
-        )
+        order = await session.get(Order, order_id)
+
+    if order is None:
+        return None
+
+    return OrderRecord(
+        order_id=order.id,
+        user_id=order.user_id,
+        status=str(order.status),
+    )
+
+
+async def list_order_statuses(user_id: str | None = None) -> dict[str, str]:
+    async with session_scope(settings.orders_database_url) as session:
+        query = select(Order)
+        if user_id is not None:
+            query = query.where(Order.user_id == user_id)
+        result = await session.execute(query.order_by(Order.created_at.desc(), Order.id.desc()))
         orders = result.scalars().all()
 
     return {str(order.id): str(order.status) for order in orders}

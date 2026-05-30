@@ -6,6 +6,7 @@ from uuid import uuid4
 from apps.order_service.app.infrastructure.clients.cart_client import get_cart_snapshot
 from apps.order_service.app.infrastructure.database.repository import (
     clear_orders,
+    get_order_record_by_id,
     get_order_status_by_id,
     list_order_statuses,
     save_order_with_outbox,
@@ -18,6 +19,7 @@ from packages.config.settings import settings
 from packages.contracts.order.events import OrderCreatedEvent, OrderCreatedPayload
 from packages.contracts.common.schemas import OrderStatus
 from packages.contracts.order.topics import RoutingKey
+from packages.errors.exceptions import ForbiddenError
 from packages.observability.logging import get_logger
 from packages.observability.metrics import (
     order_created_total,
@@ -112,16 +114,24 @@ async def save_order_status(order_id: str, status: str) -> None:
     await update_order_status(parsed_order_id, status)
 
 
-async def get_order_status(order_id: str) -> str | None:
+async def get_order_status(order_id: str, *, user_id: str | None = None) -> str | None:
     parsed_order_id = _parse_order_id(order_id)
     if parsed_order_id is None:
         return None
 
+    if user_id is not None:
+        order = await get_order_record_by_id(parsed_order_id)
+        if order is None:
+            return None
+        if order.user_id != user_id:
+            raise ForbiddenError
+        return order.status
+
     return await get_order_status_by_id(parsed_order_id)
 
 
-async def get_all_orders() -> dict[str, str]:
-    return await list_order_statuses()
+async def get_all_orders(user_id: str | None = None) -> dict[str, str]:
+    return await list_order_statuses(user_id=user_id)
 
 
 async def clear_order_state() -> None:

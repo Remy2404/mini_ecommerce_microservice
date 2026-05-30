@@ -13,6 +13,37 @@ tracing.
 - `apps/payment_service`: fake payment processing and payments in `payments_db`.
 - `apps/api_gateway`: `/api/v1/*` explicit proxy routes, auth, request IDs, rate limiting, metrics.
 
+## Local Development Setup
+
+Before running the application locally, ensure you have the following set up:
+
+### 1. Python Environment
+
+Install uv :
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Check uv version :
+
+```powershell
+uv --version
+```
+
+Create a virtual environment and activate it:
+
+```powershell
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+
+# Install dependencies
+uv sync
+```
+
 ## Run Infra
 
 ```powershell
