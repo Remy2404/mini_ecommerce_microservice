@@ -19,6 +19,12 @@ Before running the application locally, ensure you have the following set up:
 
 ### 1. Python Environment
 
+Install uv :
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
 Create a virtual environment and activate it:
 
 ```powershell
