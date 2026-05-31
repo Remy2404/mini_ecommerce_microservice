@@ -119,7 +119,7 @@ def write_report(results, img_path: Path, out_dir: Path):
     df = pd.DataFrame(results).sort_values("vus")
 
     with report_md.open("w", encoding="utf-8") as fh:
-        fh.write(f"# Phase 6 — Performance Report\n\n")
+        fh.write("# Phase 6 — Performance Report\n\n")
         fh.write(f"Generated: {now}\n\n")
         fh.write("## Summary Table\n\n")
         fh.write(df.to_markdown(index=False))
