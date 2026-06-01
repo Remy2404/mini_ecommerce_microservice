@@ -420,6 +420,31 @@ services:
     networks:
       - ecommerce-net
 
+  k6-load-test:
+    image: grafana/k6:latest
+    container_name: ecommerce-k6-load-test
+    profiles:
+      - loadtest
+    working_dir: /work
+    volumes:
+      - ..:/work
+    environment:
+      BASE_URL: http://api-gateway:8000
+      AUTH_TOKEN: ${AUTH_TOKEN:-}
+      USER_ID: ${USER_ID:-load-user}
+      PRODUCT_ID: ${PRODUCT_ID:-00000000-0000-0000-0000-000000000001}
+      K6_PRODUCT_VUS: ${K6_PRODUCT_VUS:-5}
+      K6_PRODUCT_DURATION: ${K6_PRODUCT_DURATION:-30s}
+      K6_ORDER_RATE: ${K6_ORDER_RATE:-2}
+      K6_ORDER_DURATION: ${K6_ORDER_DURATION:-30s}
+    command:
+      [
+        'run',
+        'tests/load/k6_ecommerce.js',
+      ]
+    networks:
+      - ecommerce-net
+
 volumes:
   rabbitmq-data:
   valkey-data:
