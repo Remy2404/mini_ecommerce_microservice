@@ -17,3 +17,4 @@ class ProductResponse(BaseModel):
     price: Decimal
     stock_quantity: int
     category: str
+    image_url: str | None = None

@@ -59,3 +59,13 @@ def test_gateway_accepts_wso2_opaque_access_token(monkeypatch) -> None:
 
     assert payload["sub"] == "user-123"
     assert payload["roles"] == ["customer"]
+
+
+def test_openapi_includes_product_image_upload() -> None:
+    schema = app.openapi()
+    path = schema["paths"]["/api/v1/products/{product_id}/image"]
+
+    assert "put" in path
+    operation = path["put"]
+    assert operation["tags"] == ["Product Gateway"]
+    assert operation["requestBody"]["content"].get("multipart/form-data") is not None

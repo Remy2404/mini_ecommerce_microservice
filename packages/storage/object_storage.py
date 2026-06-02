@@ -23,6 +23,15 @@ class UploadedObject:
     url: str | None
 
 
+def build_public_url(object_key: str, settings: Settings | None = None) -> str | None:
+    storage_settings = settings or get_settings()
+    if not storage_settings.object_storage_public_base_url:
+        return None
+
+    safe_key = quote(object_key)
+    return f"{storage_settings.object_storage_public_base_url.rstrip('/')}/{safe_key}"
+
+
 class ObjectStorageClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -80,11 +89,7 @@ class ObjectStorageClient:
         )
 
     def build_public_url(self, object_key: str) -> str | None:
-        if not self._settings.object_storage_public_base_url:
-            return None
-
-        safe_key = quote(object_key)
-        return f"{self._settings.object_storage_public_base_url.rstrip('/')}/{safe_key}"
+        return build_public_url(object_key, self._settings)
 
     def create_presigned_get_url(self, object_key: str) -> str:
         try:
@@ -98,6 +103,18 @@ class ObjectStorageClient:
             )
         except (BotoCoreError, ClientError) as exc:
             raise ObjectStorageError("Failed to create presigned URL.") from exc
+
+    def delete_object(self, object_key: str) -> None:
+        """Delete an object from the configured bucket.
+
+        This is a best-effort operation; errors are surfaced as ObjectStorageError.
+        """
+        try:
+            self._client.delete_object(
+                Bucket=self._settings.object_storage_bucket_name, Key=object_key
+            )
+        except (BotoCoreError, ClientError) as exc:
+            raise ObjectStorageError("Failed to delete object from storage.") from exc
 
 
 def get_object_storage_client() -> ObjectStorageClient:

@@ -12,6 +12,7 @@ class ProductEntity:
     price: Decimal
     stock_quantity: int
     category: str
+    image_object_key: str | None = None
 
 
 @dataclass(frozen=True)

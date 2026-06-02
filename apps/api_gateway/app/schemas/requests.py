@@ -26,6 +26,34 @@ def swagger_request_body(model: type[BaseModel]) -> dict[str, Any]:
     }
 
 
+def swagger_multipart_file_request_body(
+    *,
+    file_field_name: str = "file",
+    file_description: str = "Image file to upload.",
+    required: bool = True,
+) -> dict[str, Any]:
+    return {
+        "requestBody": {
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": [file_field_name],
+                        "properties": {
+                            file_field_name: {
+                                "type": "string",
+                                "format": "binary",
+                                "description": file_description,
+                            }
+                        },
+                    },
+                },
+            },
+            "required": required,
+        },
+    }
+
+
 class WSO2PasswordLoginRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={

@@ -1,7 +1,15 @@
-"""Small image-upload helpers for object-storage workflows."""
+"""Small image-upload helpers for object-storage workflows.
+
+This module validates and processes uploaded bytes using Pillow and outputs
+optimized WEBP bytes suitable for public catalog storage.
+"""
 
 from dataclasses import dataclass
+from io import BytesIO
+from typing import Tuple
 from uuid import uuid4
+
+from PIL import Image, ExifTags
 
 
 SUPPORTED_IMAGE_CONTENT_TYPES: dict[str, str] = {
@@ -52,3 +60,66 @@ def validate_image_upload(
         content_type=content_type,
         size_bytes=size_bytes,
     )
+
+
+def process_image_bytes(
+    data: bytes, *, max_width: int = 1200, max_height: int = 1200
+) -> Tuple[BytesIO, str]:
+    """Process raw image bytes and return a BytesIO with WEBP data and the
+    content type string.
+
+    Steps:
+    - Verify bytes are a supported image
+    - Apply EXIF orientation if present
+    - Resize to fit within max_width/max_height preserving aspect
+    - Encode to optimized WEBP and return buffer
+    """
+    try:
+        img = Image.open(BytesIO(data))
+    except Exception as exc:  # Pillow raises various errors
+        raise ImageValidationError("Invalid image data") from exc
+
+    # Apply EXIF orientation if present
+    try:
+        exif = img._getexif()
+        if exif:
+            for tag, value in ExifTags.TAGS.items():
+                if value == "Orientation":
+                    orientation_tag = tag
+                    break
+            else:
+                orientation_tag = None
+
+            if orientation_tag and orientation_tag in exif:
+                orientation = exif[orientation_tag]
+                if orientation == 3:
+                    img = img.rotate(180, expand=True)
+                elif orientation == 6:
+                    img = img.rotate(270, expand=True)
+                elif orientation == 8:
+                    img = img.rotate(90, expand=True)
+    except Exception:
+        # Non-fatal: EXIF parsing can fail on malformed EXIF - ignore
+        pass
+
+    # Convert to RGB if necessary
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+
+    # Resize preserving aspect ratio
+    img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+
+    out = BytesIO()
+    try:
+        img.save(
+            out,
+            format="WEBP",
+            quality=80,
+            method=6,
+            optimize=True,
+        )
+    except Exception as exc:
+        raise ImageValidationError("Failed to encode image") from exc
+
+    out.seek(0)
+    return out, "image/webp"

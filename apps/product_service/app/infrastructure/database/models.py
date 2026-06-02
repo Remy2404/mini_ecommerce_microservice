@@ -65,3 +65,5 @@ class Product(ProductBase):
     )
 
     category: Mapped[Category] = relationship(back_populates="products")
+    # Internal storage key for the product's primary image (optimized WEBP).
+    image_object_key: Mapped[str | None] = mapped_column(String(512))

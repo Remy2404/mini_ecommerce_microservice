@@ -7,6 +7,7 @@ from apps.product_service.app.infrastructure.database.models import Category, Pr
 from apps.product_service.app.schemas import CategoryResponse, ProductResponse
 from packages.config.settings import settings
 from packages.database.session import session_scope
+from packages.storage.object_storage import build_public_url
 
 
 def _product_response(product: Product) -> ProductResponse:
@@ -17,6 +18,7 @@ def _product_response(product: Product) -> ProductResponse:
         price=product.price,
         stock_quantity=product.stock_quantity,
         category=product.category.name,
+        image_url=build_public_url(product.image_object_key) if product.image_object_key else None,
     )
 
 
@@ -111,3 +113,19 @@ async def list_categories() -> list[CategoryResponse]:
 async def _get_category_by_name(session, name: str) -> Category | None:
     result = await session.execute(select(Category).where(Category.name == name))
     return result.scalar_one_or_none()
+
+
+async def update_product_image(product_id: UUID, new_object_key: str) -> str | None:
+    """Set the product.image_object_key to new_object_key and return the
+    previous object key (if any).
+    """
+    async with session_scope(settings.products_database_url) as session:
+        product = await session.get(Product, product_id)
+        if product is None:
+            return None
+
+        old_key = product.image_object_key
+        product.image_object_key = new_object_key
+        await session.flush()
+
+    return old_key

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Depends, Header
 
 from packages.config.settings import settings
 from packages.contracts.common.schemas import ApiResponse
@@ -20,7 +20,12 @@ from apps.product_service.app.application.services import (
     find_categories,
     find_product,
     find_products,
+    upload_product_image,
 )
+from packages.errors.exceptions import to_http_exception
+from packages.security.permissions import require_scope
+from packages.security import jwt_validator
+from packages.security.jwt_validator import TokenValidationError
 
 router = APIRouter()
 
@@ -126,3 +131,52 @@ async def get_product_endpoint(
         message="Product fetched successfully",
         data=product,
     )
+
+
+async def _require_product_image_write_scope(
+    authorization: str | None = Header(None),
+) -> None:
+    """Validate the Authorization header against WSO2 and require upload scope.
+
+    The API gateway forwards the original Authorization header; downstream
+    services should validate the token and enforce the WSO2 API scope.
+    """
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authorization")
+
+    if not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization header")
+
+    token = authorization.split(None, 1)[1]
+    try:
+        payload = await jwt_validator.validate_wso2_access_token(token)
+    except TokenValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
+    except Exception as exc:
+        # Treat provider errors as 503
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Auth provider unavailable") from exc
+
+    try:
+        require_scope(payload.get("scope", ""), "product_image_write")
+    except Exception as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.put("/products/{product_id}/image", status_code=status.HTTP_200_OK)
+async def upload_product_image_endpoint(
+    product_id: UUID,
+    file: UploadFile = File(...),
+    _auth: None = Depends(_require_product_image_write_scope),
+) -> ApiResponse[dict]:
+    # Read bytes
+    data = await file.read()
+
+    try:
+        image_url = await upload_product_image(product_id=product_id, data=data)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to upload product image", product_id=str(product_id))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Image upload failed")
+
+    return ApiResponse(success=True, message="Image uploaded", data={"image_url": image_url})
