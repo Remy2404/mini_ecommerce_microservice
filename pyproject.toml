@@ -57,27 +57,7 @@ dependencies = [
     "tabulate>=0.9.0",
     "boto3>=1.43.18",
     "pillow>=12.2.0",
-    "ecommerce-config>=0.1.0",
-    "ecommerce-cache>=0.1.0",
-    "ecommerce-database>=0.1.0",
-    "ecommerce-errors>=0.1.0",
-    "ecommerce-contracts>=0.1.0",
-    "ecommerce-observability>=0.1.0",
-    "ecommerce-security>=0.1.0",
-    "ecommerce-messaging>=0.1.0",
-    "ecommerce-storage>=0.1.0",
 ]
-
-[tool.uv.sources]
-ecommerce-config = { path = "libs/ecommerce-config" }
-ecommerce-cache = { path = "libs/ecommerce-cache" }
-ecommerce-database = { path = "libs/ecommerce-database" }
-ecommerce-errors = { path = "libs/ecommerce-errors" }
-ecommerce-contracts = { path = "libs/ecommerce-contracts" }
-ecommerce-observability = { path = "libs/ecommerce-observability" }
-ecommerce-security = { path = "libs/ecommerce-security" }
-ecommerce-messaging = { path = "libs/ecommerce-messaging" }
-ecommerce-storage = { path = "libs/ecommerce-storage" }
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"

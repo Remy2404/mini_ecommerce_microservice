@@ -4,11 +4,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Depends, Header
 
-from ecommerce_config.settings import settings
-from ecommerce_contracts.common.schemas import ApiResponse
-from ecommerce_observability.logging import get_logger
-from ecommerce_observability.tracing import add_span_attributes
+from apps.product_service.app.infrastructure.config.settings import settings
+from apps.product_service.app.infrastructure.errors.exceptions import to_http_exception
+from apps.product_service.app.infrastructure.observability.logging import get_logger
+from apps.product_service.app.infrastructure.observability.tracing import (
+    add_span_attributes,
+)
 from apps.product_service.app.schemas import (
+    ApiResponse,
     CategoryResponse,
     CreateCategoryRequest,
     CreateProductRequest,
@@ -22,10 +25,11 @@ from apps.product_service.app.application.services import (
     find_products,
     upload_product_image,
 )
-from ecommerce_errors.exceptions import to_http_exception
-from ecommerce_security.permissions import require_scope
-from ecommerce_security import jwt_validator
-from ecommerce_security.jwt_validator import TokenValidationError
+from apps.product_service.app.infrastructure.security import jwt_validator
+from apps.product_service.app.infrastructure.security.jwt_validator import (
+    TokenValidationError,
+)
+from apps.product_service.app.infrastructure.security.permissions import require_scope
 
 router = APIRouter()
 

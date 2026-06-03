@@ -3,11 +3,13 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from apps.product_service.app.infrastructure.config.settings import settings
+from apps.product_service.app.infrastructure.database.session import session_scope
 from apps.product_service.app.infrastructure.database.models import Category, Product
 from apps.product_service.app.schemas import CategoryResponse, ProductResponse
-from ecommerce_config.settings import settings
-from ecommerce_database.session import session_scope
-from ecommerce_storage.object_storage import build_public_url
+from apps.product_service.app.infrastructure.storage.object_storage import (
+    build_public_url,
+)
 
 
 def _product_response(product: Product) -> ProductResponse:

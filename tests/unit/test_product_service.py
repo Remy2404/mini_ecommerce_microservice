@@ -3,9 +3,9 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from ecommerce_config.settings import settings
 from apps.product_service.app.main import app
 from apps.product_service.app.schemas import ProductResponse
+from apps.product_service.app.infrastructure.config.settings import settings
 
 
 def test_health_endpoint_returns_ok() -> None:

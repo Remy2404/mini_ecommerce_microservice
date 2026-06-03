@@ -4,6 +4,11 @@ from uuid import UUID
 from uuid import uuid4
 
 from apps.order_service.app.infrastructure.clients.cart_client import get_cart_snapshot
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.errors.exceptions import ForbiddenError
+from apps.order_service.app.infrastructure.messaging.outbox_publisher import (
+    publish_pending_order_events,
+)
 from apps.order_service.app.infrastructure.database.repository import (
     clear_orders,
     get_order_record_by_id,
@@ -12,20 +17,17 @@ from apps.order_service.app.infrastructure.database.repository import (
     save_order_with_outbox,
     update_order_status,
 )
-from apps.order_service.app.infrastructure.messaging.outbox_publisher import (
-    publish_pending_order_events,
-)
-from ecommerce_config.settings import settings
-from ecommerce_contracts.order.events import OrderCreatedEvent, OrderCreatedPayload
-from ecommerce_contracts.common.schemas import OrderStatus
-from ecommerce_contracts.order.topics import RoutingKey
-from ecommerce_errors.exceptions import ForbiddenError
-from ecommerce_observability.logging import get_logger
-from ecommerce_observability.metrics import (
+from apps.order_service.app.infrastructure.observability.logging import get_logger
+from apps.order_service.app.infrastructure.observability.metrics import (
     order_created_total,
     rabbitmq_message_published_total,
 )
-from ecommerce_observability.tracing import add_span_attributes
+from apps.order_service.app.infrastructure.observability.tracing import (
+    add_span_attributes,
+)
+from apps.order_service.app.schemas import OrderCreatedEvent, OrderCreatedPayload
+from apps.order_service.app.schemas.common import OrderStatus
+from apps.order_service.app.schemas.topics import RoutingKey
 
 
 logger = get_logger(__name__)

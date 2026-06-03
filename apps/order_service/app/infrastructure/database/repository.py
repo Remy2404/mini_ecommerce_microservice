@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import delete, or_, select
 
+from apps.order_service.app.infrastructure.config.settings import settings
 from apps.order_service.app.infrastructure.clients.cart_client import CartSnapshotItem
 from apps.order_service.app.infrastructure.database.models import (
     InboxEvent,
@@ -14,8 +15,7 @@ from apps.order_service.app.infrastructure.database.models import (
     OrderItem,
     OutboxEvent,
 )
-from ecommerce_config.settings import settings
-from ecommerce_database.session import session_scope
+from apps.order_service.app.infrastructure.database.session import session_scope
 
 
 @dataclass(frozen=True)

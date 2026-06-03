@@ -4,10 +4,12 @@ from fastapi import FastAPI
 from prometheus_client import make_asgi_app
 
 from apps.payment_service.app.api.routes import router as payment_router
-from ecommerce_config.settings import settings
-from ecommerce_observability.http_metrics import HTTPMetricsMiddleware
-from ecommerce_observability.logging import setup_logging
-from ecommerce_observability.tracing import setup_tracing
+from apps.payment_service.app.infrastructure.config.settings import settings
+from apps.payment_service.app.infrastructure.observability.http_metrics import (
+    HTTPMetricsMiddleware,
+)
+from apps.payment_service.app.infrastructure.observability.logging import setup_logging
+from apps.payment_service.app.infrastructure.observability.tracing import setup_tracing
 
 app = FastAPI(title="Payment Service")
 

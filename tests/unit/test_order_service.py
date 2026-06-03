@@ -5,9 +5,11 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from apps.order_service.app.application import services as order_services
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.order_service.app.main import app
-from ecommerce_config.settings import settings
-from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 
 OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}
 
@@ -85,9 +87,12 @@ def test_create_order_endpoint_returns_created_order() -> None:
 def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_apply_result
 ) -> None:
-    from ecommerce_contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
     from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
         handle_payment_result,
+    )
+    from apps.order_service.app.schemas.events import (
+        PaymentSuccessEvent,
+        PaymentSuccessPayload,
     )
     import asyncio
 

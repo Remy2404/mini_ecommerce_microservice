@@ -2,7 +2,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ecommerce_observability.logging import get_logger
+from apps.api_gateway.app.infrastructure.observability.logging import get_logger
 
 logger = get_logger(__name__)
 

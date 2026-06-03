@@ -1,9 +1,15 @@
 """Durable outbox publisher for Payment Service events."""
 
-from ecommerce_contracts.payment.events import PaymentFailedEvent, PaymentSuccessEvent
-from ecommerce_contracts.payment.topics import RoutingKey
-from ecommerce_messaging.broker import broker, ecommerce_exchange
-from ecommerce_observability.logging import get_logger
+from apps.payment_service.app.infrastructure.messaging.broker import (
+    broker,
+    ecommerce_exchange,
+)
+from apps.payment_service.app.infrastructure.observability.logging import get_logger
+from apps.payment_service.app.schemas.events import (
+    PaymentFailedEvent,
+    PaymentSuccessEvent,
+)
+from apps.payment_service.app.schemas.topics import RoutingKey
 
 from apps.payment_service.app.infrastructure.database.repository import (
     claim_pending_outbox_events,

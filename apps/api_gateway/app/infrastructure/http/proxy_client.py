@@ -2,7 +2,7 @@ import httpx
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from ecommerce_config.settings import settings
+from apps.api_gateway.app.infrastructure.config.settings import settings
 
 SERVICE_MAP = {
     "auth": "auth_service_url",

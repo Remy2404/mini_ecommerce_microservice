@@ -12,9 +12,9 @@ from apps.payment_service.app.infrastructure.database.models import (
     OutboxEvent,
     Payment,
 )
+from apps.payment_service.app.infrastructure.config.settings import settings
+from apps.payment_service.app.infrastructure.database.session import session_scope
 from apps.payment_service.app.schemas.responses import PaymentResponse
-from ecommerce_config.settings import settings
-from ecommerce_database.session import session_scope
 
 
 @dataclass(frozen=True)

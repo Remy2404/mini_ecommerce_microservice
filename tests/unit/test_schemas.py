@@ -4,22 +4,19 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from apps.order_service.app.schemas.common import ApiResponse, OrderStatus
+from apps.order_service.app.schemas.responses import OrderSummaryResponse
 from apps.product_service.app.schemas.requests import CreateProductRequest
-from ecommerce_contracts.schemas import ApiResponse, OrderResponse, OrderStatus
 
 
-def test_order_response_schema():
-    order = OrderResponse(
+def test_order_summary_schema():
+    order = OrderSummaryResponse(
         order_id=uuid4(),
-        user_id="user_123",
-        cart_id="cart_user_123",
         status=OrderStatus.PENDING,
-        total_amount=Decimal("99.98"),
-        items=[],
     )
 
     assert order.status == OrderStatus.PENDING
-    assert order.total_amount == Decimal("99.98")
+    assert order.order_id is not None
 
 
 def test_api_response_schema():

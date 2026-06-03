@@ -17,11 +17,14 @@ New code, tests, docs, and local commands import from `apps.*`.
 - `app/schemas`: request and response DTOs.
 - `workers`: background process entrypoints.
 
-## Shared Packages
+## Shared Libraries
 
-- `packages/contracts`: shared API and event language.
-- `packages/messaging`: RabbitMQ broker and delivery plumbing.
-- `packages/database`: SQLAlchemy engine and session helpers.
-- `packages/cache`: Valkey client setup.
-- `packages/observability`: logging, metrics, tracing, and HTTP metrics middleware.
-- `packages/security`: reusable security helpers.
+- `libs/ecommerce-contracts`: shared API and event language.
+- `libs/ecommerce-messaging`: RabbitMQ broker and delivery plumbing.
+- `libs/ecommerce-database`: SQLAlchemy engine and session helpers.
+- `libs/ecommerce-cache`: Valkey client setup.
+- `libs/ecommerce-observability`: logging, metrics, tracing, and HTTP metrics middleware.
+- `libs/ecommerce-security`: reusable security helpers.
+- `libs/ecommerce-config`: shared application settings.
+- `libs/ecommerce-errors`: common application errors and handlers.
+- `libs/ecommerce-storage`: object storage and image-processing helpers.

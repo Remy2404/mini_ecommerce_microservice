@@ -25,14 +25,21 @@ from apps.payment_service.app.infrastructure.messaging.order_created_consumer im
     process_payment,
 )
 from apps.product_service.app.schemas import ProductResponse
-from ecommerce_config.settings import settings
-from ecommerce_contracts.events import (
-    OrderCreatedEvent,
-    OrderCreatedPayload,
+from apps.api_gateway.app.infrastructure.config.settings import (
+    settings as gateway_settings,
+)
+from apps.order_service.app.schemas.events import (
     PaymentFailedEvent,
     PaymentFailedPayload,
     PaymentSuccessEvent,
     PaymentSuccessPayload,
+)
+from apps.payment_service.app.infrastructure.config.settings import (
+    settings as payment_settings,
+)
+from apps.payment_service.app.schemas.events import (
+    OrderCreatedEvent,
+    OrderCreatedPayload,
 )
 
 
@@ -268,7 +275,7 @@ def test_e2e_payment_worker_persists_outbox_and_publishes(monkeypatch) -> None:
         "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
         lambda limit: _return_and_record_async(published_batches, limit, 1),
     )
-    monkeypatch.setattr(settings, "payment_success_rate", 1.0)
+    monkeypatch.setattr(payment_settings, "payment_success_rate", 1.0)
 
     asyncio.run(process_payment(event))
 
@@ -284,9 +291,9 @@ def test_e2e_gateway_route_metrics_and_auth(monkeypatch) -> None:
     FakeGatewayAsyncClient.calls = []
     monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeGatewayAsyncClient)
     monkeypatch.setattr(wso2_client, "introspect_access_token", fake_introspection)
-    monkeypatch.setattr(settings, "gateway_auth_enabled", True)
-    monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
-    monkeypatch.setattr(settings, "product_service_url", "http://product-service")
+    monkeypatch.setattr(gateway_settings, "gateway_auth_enabled", True)
+    monkeypatch.setattr(gateway_settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(gateway_settings, "product_service_url", "http://product-service")
 
     with TestClient(gateway_app) as client:
         protected = client.get(

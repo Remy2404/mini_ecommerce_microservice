@@ -3,7 +3,9 @@ from typing import Any
 from fastapi import APIRouter
 
 from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
-from ecommerce_security.wso2_login import request_wso2_password_token
+from apps.api_gateway.app.infrastructure.security.wso2_login import (
+    request_wso2_password_token,
+)
 
 router = APIRouter()
 

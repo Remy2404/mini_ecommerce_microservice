@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from apps.payment_service.app.application.services import process_fake_payment
 from apps.payment_service.app.infrastructure.database.models import Payment
 from apps.payment_service.app.main import app
-from ecommerce_config.settings import settings
+from apps.payment_service.app.infrastructure.config.settings import settings
 
 
 def test_fake_payment_provider_success_and_failure(monkeypatch) -> None:

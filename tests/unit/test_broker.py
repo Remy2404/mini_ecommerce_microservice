@@ -1,5 +1,4 @@
-from ecommerce_contracts.topics import ExchangeName, QueueName
-from ecommerce_messaging.broker import (
+from apps.order_service.app.infrastructure.messaging.broker import (
     broker,
     cart_restore_queue,
     dead_letter_exchange,
@@ -12,6 +11,7 @@ from ecommerce_messaging.broker import (
     payment_success_retry_queue,
     retry_exchange,
 )
+from apps.order_service.app.schemas.topics import ExchangeName, QueueName
 
 
 def test_broker_is_configured():

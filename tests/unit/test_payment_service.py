@@ -3,10 +3,10 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from ecommerce_contracts.events import OrderCreatedEvent, OrderCreatedPayload
 from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
     process_payment,
 )
+from apps.payment_service.app.schemas.events import OrderCreatedEvent, OrderCreatedPayload
 
 
 def _order_created_event() -> OrderCreatedEvent:

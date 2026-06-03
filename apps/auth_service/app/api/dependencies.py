@@ -2,7 +2,7 @@
 
 from fastapi import Header, HTTPException, status
 
-from ecommerce_security.jwt_validator import (
+from apps.auth_service.app.infrastructure.security.jwt_validator import (
     AuthProviderUnavailableError,
     TokenValidationError,
     validate_wso2_access_token,

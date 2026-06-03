@@ -1,5 +1,6 @@
 """Product Service request and response DTOs."""
 
+from apps.product_service.app.schemas.common import ApiResponse
 from apps.product_service.app.schemas.requests import (
     CreateCategoryRequest,
     CreateProductRequest,
@@ -7,6 +8,7 @@ from apps.product_service.app.schemas.requests import (
 from apps.product_service.app.schemas.responses import CategoryResponse, ProductResponse
 
 __all__ = [
+    "ApiResponse",
     "CategoryResponse",
     "CreateCategoryRequest",
     "CreateProductRequest",

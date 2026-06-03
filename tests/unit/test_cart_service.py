@@ -8,8 +8,10 @@ from apps.cart_service.app.application import services as cart_service
 from apps.cart_service.app.infrastructure.clients import product_client
 from apps.cart_service.app.main import app
 from apps.cart_service.app.schemas import CartItemResponse, CartResponse
-from ecommerce_config.settings import settings
-from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
+from apps.cart_service.app.infrastructure.config.settings import settings
+from apps.cart_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 
 PRODUCT_ID = uuid4()
 OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}

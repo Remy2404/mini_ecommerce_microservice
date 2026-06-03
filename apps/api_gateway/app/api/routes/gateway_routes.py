@@ -4,7 +4,18 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from apps.api_gateway.app.api.dependencies import rate_limit, validate_token
+from apps.api_gateway.app.infrastructure.config.settings import settings
+from apps.api_gateway.app.infrastructure.errors.exceptions import ForbiddenError
 from apps.api_gateway.app.infrastructure.http.proxy_client import forward_request
+from apps.api_gateway.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
+from apps.api_gateway.app.infrastructure.security.permissions import (
+    require_owner_or_role,
+)
+from apps.api_gateway.app.infrastructure.security.wso2_login import (
+    request_wso2_password_token,
+)
 from apps.api_gateway.app.schemas.requests import (
     GatewayAddCartItemRequest,
     GatewayCreateCategoryRequest,
@@ -22,12 +33,6 @@ from apps.api_gateway.app.schemas.responses import (
     GatewayWso2UsersListResponse,
     WSO2TokenResponse,
 )
-from ecommerce_config.settings import settings
-from ecommerce_errors.exceptions import ForbiddenError
-from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
-from ecommerce_security.permissions import require_owner_or_role
-from ecommerce_security.wso2_login import request_wso2_password_token
-
 router = APIRouter()
 
 

@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 from apps.api_gateway.app.infrastructure.security import wso2_client as auth
 from apps.api_gateway.app.main import app
-from ecommerce_config.settings import settings
+from apps.api_gateway.app.infrastructure.config.settings import settings
 
 
 class FakeAsyncClient:

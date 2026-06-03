@@ -9,7 +9,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from apps.order_service.app.infrastructure.database.models import OrderBase
-from ecommerce_config.settings import settings
+from apps.order_service.app.infrastructure.config.settings import settings
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.orders_database_url)

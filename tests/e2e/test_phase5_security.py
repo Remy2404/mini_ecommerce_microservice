@@ -22,12 +22,14 @@ from fastapi.testclient import TestClient
 
 from apps.api_gateway.app.api.dependencies import validate_token
 from apps.api_gateway.app.infrastructure.cache import rate_limit_store
+from apps.api_gateway.app.infrastructure.config.settings import settings
 from apps.api_gateway.app.infrastructure.http import proxy_client
 from apps.api_gateway.app.infrastructure.security import wso2_client
+from apps.api_gateway.app.infrastructure.security.jwt_validator import (
+    TokenValidationError,
+)
 from apps.api_gateway.app.main import app as gateway_app
 from apps.cart_service.app.main import app as cart_app
-from ecommerce_config.settings import settings
-from ecommerce_security.jwt_validator import TokenValidationError
 
 
 # ============================================================================

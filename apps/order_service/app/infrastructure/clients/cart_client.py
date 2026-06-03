@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from apps.order_service.app.domain.exceptions import CartNotFoundError, EmptyCartError
-from ecommerce_cache.valkey_client import get_valkey_client
+from apps.order_service.app.infrastructure.cache.valkey_client import get_valkey_client
 
 
 @dataclass(frozen=True)

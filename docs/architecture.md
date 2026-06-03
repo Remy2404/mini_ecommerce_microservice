@@ -1,7 +1,7 @@
 # Architecture
 
 The canonical implementation lives under `apps/<service_name>` and shared
-library code lives under `packages`.
+library code lives under `libs/ecommerce-*`.
 
 Each service follows the same layering:
 

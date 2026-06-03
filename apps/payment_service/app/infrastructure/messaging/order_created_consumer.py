@@ -2,35 +2,47 @@ import asyncio
 import random
 from uuid import uuid4
 
-from ecommerce_config.settings import settings
-from ecommerce_contracts.order.events import OrderCreatedEvent
-from ecommerce_contracts.payment.events import (
-    PaymentFailedEvent,
-    PaymentFailedPayload,
-    PaymentSuccessEvent,
-    PaymentSuccessPayload,
+from apps.payment_service.app.infrastructure.cache.idempotency import (
+    acquire_payment_event_lock,
 )
-from ecommerce_contracts.payment.topics import QueueName, RoutingKey
-from ecommerce_messaging.broker import broker, ecommerce_exchange, order_created_queue
-from ecommerce_messaging.retry import publish_retry_or_dlq
-from ecommerce_observability.logging import get_logger, setup_logging
-from ecommerce_observability.metrics import (
+from apps.payment_service.app.infrastructure.config.settings import settings
+from apps.payment_service.app.infrastructure.database.repository import (
+    save_payment_with_outbox_once,
+)
+from apps.payment_service.app.infrastructure.messaging.broker import (
+    broker,
+    ecommerce_exchange,
+    order_created_queue,
+)
+from apps.payment_service.app.infrastructure.messaging.outbox_publisher import (
+    publish_pending_payment_events,
+)
+from apps.payment_service.app.infrastructure.messaging.retry import (
+    publish_retry_or_dlq,
+)
+from apps.payment_service.app.infrastructure.observability.logging import (
+    get_logger,
+    setup_logging,
+)
+from apps.payment_service.app.infrastructure.observability.metrics import (
     payment_failed_total,
     payment_success_total,
     rabbitmq_message_consumed_total,
     rabbitmq_message_published_total,
 )
-from ecommerce_observability.tracing import add_span_attributes, setup_tracing
+from apps.payment_service.app.infrastructure.observability.tracing import (
+    add_span_attributes,
+    setup_tracing,
+)
 from apps.payment_service.app.application.services import process_fake_payment
-from apps.payment_service.app.infrastructure.cache.idempotency import (
-    acquire_payment_event_lock,
+from apps.payment_service.app.schemas.events import (
+    OrderCreatedEvent,
+    PaymentFailedEvent,
+    PaymentFailedPayload,
+    PaymentSuccessEvent,
+    PaymentSuccessPayload,
 )
-from apps.payment_service.app.infrastructure.database.repository import (
-    save_payment_with_outbox_once,
-)
-from apps.payment_service.app.infrastructure.messaging.outbox_publisher import (
-    publish_pending_payment_events,
-)
+from apps.payment_service.app.schemas.topics import QueueName, RoutingKey
 
 setup_logging(settings.payment_service_name)
 setup_tracing(settings.payment_service_name)

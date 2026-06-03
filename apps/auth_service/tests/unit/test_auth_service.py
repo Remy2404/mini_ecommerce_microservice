@@ -7,13 +7,19 @@ from pydantic import SecretStr
 
 from apps.auth_service.app.api import routes as auth_routes
 from apps.auth_service.app.application.services import AuthService
+from apps.auth_service.app.infrastructure.config.settings import settings
+from apps.auth_service.app.infrastructure.security import wso2_login, wso2_scim
+from apps.auth_service.app.infrastructure.security.passwords import (
+    hash_password,
+    verify_password,
+)
+from apps.auth_service.app.infrastructure.security.wso2_scim import (
+    WSO2SCIMError,
+    register_wso2_user,
+)
 from apps.auth_service.app.main import app
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import RegisterUserResponse
-from ecommerce_config.settings import settings
-from ecommerce_security import wso2_login, wso2_scim
-from ecommerce_security.passwords import hash_password, verify_password
-from ecommerce_security.wso2_scim import WSO2SCIMError, register_wso2_user
 
 
 class FakeWSO2AsyncClient:

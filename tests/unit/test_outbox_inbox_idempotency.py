@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from ecommerce_contracts.events import (
+from apps.order_service.app.schemas.events import (
     OrderCreatedEvent,
     OrderCreatedPayload,
     PaymentSuccessEvent,

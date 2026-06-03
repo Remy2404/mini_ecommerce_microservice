@@ -2,8 +2,8 @@ import json
 from decimal import Decimal
 from uuid import UUID
 
-from ecommerce_cache.valkey_client import get_valkey_client
-from ecommerce_config.settings import settings
+from apps.cart_service.app.infrastructure.cache.valkey_client import get_valkey_client
+from apps.cart_service.app.infrastructure.config.settings import settings
 from apps.cart_service.app.schemas import CartResponse
 
 CART_KEY_PREFIX = "cart"

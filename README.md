@@ -4,6 +4,17 @@ Production-style FastAPI backend template with service-owned databases, Valkey,
 RabbitMQ saga events, structured logs, Prometheus metrics, and OpenTelemetry
 tracing.
 
+Shared code lives in `libs/ecommerce-*` libraries:
+- `ecommerce-config`
+- `ecommerce-cache`
+- `ecommerce-database`
+- `ecommerce-errors`
+- `ecommerce-contracts`
+- `ecommerce-observability`
+- `ecommerce-security`
+- `ecommerce-messaging`
+- `ecommerce-storage`
+
 ## Services
 
 - `apps/auth_service`: users, profiles, addresses, and roles. Access tokens are issued by WSO2.

@@ -10,6 +10,7 @@ from pydantic import SecretStr
 
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 from apps.api_gateway.app.infrastructure.security import wso2_client
+from apps.api_gateway.app.infrastructure.config.settings import settings
 from apps.api_gateway.app.main import app as gateway_app
 from apps.auth_service.app.application.services import AuthService
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
@@ -21,7 +22,6 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
     CartSnapshotItem,
 )
 from apps.product_service.app.schemas import ProductResponse
-from ecommerce_config.settings import settings
 
 
 # ========== Test Data ==========

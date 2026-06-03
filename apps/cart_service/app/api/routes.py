@@ -4,13 +4,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from ecommerce_config.settings import settings
-from ecommerce_contracts.common.schemas import ApiResponse
-from ecommerce_observability.logging import get_logger
-from ecommerce_observability.tracing import add_span_attributes
-from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.cart_service.app.application import services as cart_service
+from apps.cart_service.app.infrastructure.config.settings import settings
+from apps.cart_service.app.infrastructure.observability.logging import get_logger
+from apps.cart_service.app.infrastructure.observability.tracing import (
+    add_span_attributes,
+)
+from apps.cart_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.cart_service.app.schemas import AddCartItemRequest, CartResponse
+from apps.cart_service.app.schemas.common import ApiResponse
 
 router = APIRouter()
 

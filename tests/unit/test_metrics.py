@@ -1,4 +1,6 @@
-from ecommerce_observability.metrics import order_created_total
+from apps.order_service.app.infrastructure.observability.metrics import (
+    order_created_total,
+)
 
 
 def test_order_created_metric_can_increment():

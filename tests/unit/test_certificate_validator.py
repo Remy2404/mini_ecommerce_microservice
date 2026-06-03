@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-from ecommerce_security.certificate_validator import (
+from apps.api_gateway.app.infrastructure.security.certificate_validator import (
     CertificateValidationError,
     validate_mtls_certificate_bundle,
 )

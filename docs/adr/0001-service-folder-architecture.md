@@ -16,6 +16,7 @@ cost without protecting an in-repo caller.
 
 - New code uses `apps.*` imports.
 - Legacy compatibility imports are unsupported.
-- Shared contracts live under nested `packages/contracts/*` modules with
-  top-level re-export shims.
+- Shared contracts live in `libs/ecommerce-contracts`.
+- Messaging, cache, database, errors, observability, config, and storage code
+  live in their own `libs/ecommerce-*` libraries.
 - External commands and deployments must use canonical `apps.*` entrypoints.

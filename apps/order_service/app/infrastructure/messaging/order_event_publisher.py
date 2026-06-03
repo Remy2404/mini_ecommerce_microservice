@@ -1,7 +1,10 @@
-from ecommerce_contracts.order.events import OrderCreatedEvent
-from ecommerce_contracts.order.topics import RoutingKey
-from ecommerce_messaging.broker import broker, ecommerce_exchange
-from ecommerce_messaging.publisher import publish_event
+from apps.order_service.app.infrastructure.messaging.broker import (
+    broker,
+    ecommerce_exchange,
+)
+from apps.order_service.app.infrastructure.messaging.publisher import publish_event
+from apps.order_service.app.schemas.events import OrderCreatedEvent
+from apps.order_service.app.schemas.topics import RoutingKey
 
 
 async def publish_order_created(event: OrderCreatedEvent) -> None:
@@ -11,4 +14,3 @@ async def publish_order_created(event: OrderCreatedEvent) -> None:
         exchange=ecommerce_exchange,
         message_broker=broker,
     )
-

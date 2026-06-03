@@ -1,18 +1,38 @@
+from __future__ import annotations
+
 import asyncio
 
-from ecommerce_config.settings import settings
-from ecommerce_contracts.payment.events import PaymentFailedEvent, PaymentSuccessEvent
-from ecommerce_contracts.common.schemas import OrderStatus
-from ecommerce_contracts.payment.topics import QueueName, RoutingKey
-from ecommerce_messaging.broker import broker, ecommerce_exchange, payment_result_queue
-from ecommerce_messaging.retry import publish_retry_or_dlq
-from ecommerce_observability.logging import get_logger, setup_logging
-from ecommerce_observability.metrics import order_cancelled_total, order_confirmed_total
-from ecommerce_observability.tracing import add_span_attributes, setup_tracing
-from ecommerce_cache.valkey_client import get_valkey_client
+from apps.order_service.app.infrastructure.cache.valkey_client import (
+    get_valkey_client,
+)
+from apps.order_service.app.infrastructure.config.settings import settings
 from apps.order_service.app.infrastructure.database.repository import (
     apply_payment_result_once,
 )
+from apps.order_service.app.infrastructure.messaging.broker import (
+    broker,
+    ecommerce_exchange,
+    payment_result_queue,
+)
+from apps.order_service.app.infrastructure.messaging.retry import publish_retry_or_dlq
+from apps.order_service.app.infrastructure.observability.logging import (
+    get_logger,
+    setup_logging,
+)
+from apps.order_service.app.infrastructure.observability.metrics import (
+    order_cancelled_total,
+    order_confirmed_total,
+)
+from apps.order_service.app.infrastructure.observability.tracing import (
+    add_span_attributes,
+    setup_tracing,
+)
+from apps.order_service.app.schemas.common import OrderStatus
+from apps.order_service.app.schemas.events import (
+    PaymentFailedEvent,
+    PaymentSuccessEvent,
+)
+from apps.order_service.app.schemas.topics import QueueName, RoutingKey
 
 setup_logging(settings.order_service_name)
 setup_tracing(settings.order_service_name)
@@ -73,7 +93,6 @@ async def _handle_payment_result_once(
             )
             return
 
-        # Clear the user's cart on payment success
         try:
             valkey_client = get_valkey_client()
             valkey_client.delete(f"cart:{event.payload.user_id}")
@@ -143,4 +162,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

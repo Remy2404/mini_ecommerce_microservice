@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from ecommerce_config.settings import settings
+from apps.payment_service.app.infrastructure.config.settings import settings
 
 
 @dataclass(frozen=True)

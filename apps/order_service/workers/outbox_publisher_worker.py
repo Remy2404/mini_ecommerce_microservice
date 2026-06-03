@@ -2,9 +2,12 @@
 
 import asyncio
 
-from ecommerce_config.settings import settings
-from ecommerce_observability.logging import get_logger, setup_logging
-from ecommerce_observability.tracing import setup_tracing
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.observability.logging import (
+    get_logger,
+    setup_logging,
+)
+from apps.order_service.app.infrastructure.observability.tracing import setup_tracing
 
 from apps.order_service.app.infrastructure.messaging.outbox_publisher import (
     publish_pending_order_events,

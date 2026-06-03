@@ -11,7 +11,7 @@ from apps.product_service.app.schemas import (
     CreateProductRequest,
     ProductResponse,
 )
-from ecommerce_storage import image_processor, object_storage
+from apps.product_service.app.infrastructure.storage import image_processor, object_storage
 from apps.product_service.app.infrastructure.cache.product_cache import (
     delete_product_cache,
 )

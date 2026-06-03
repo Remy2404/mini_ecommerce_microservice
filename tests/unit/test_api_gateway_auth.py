@@ -4,8 +4,8 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-from ecommerce_config.settings import settings
 from apps.api_gateway.app.infrastructure.security import wso2_client as auth
+from apps.api_gateway.app.infrastructure.config.settings import settings
 
 
 class FakeAsyncClient:

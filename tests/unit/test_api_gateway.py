@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from apps.api_gateway.app.api.dependencies import (
     validate_token as gateway_validate_token,
 )
-from ecommerce_config.settings import settings
+from apps.api_gateway.app.infrastructure.config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 

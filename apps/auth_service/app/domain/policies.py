@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from ecommerce_errors.exceptions import ForbiddenError
+from apps.auth_service.app.infrastructure.errors.exceptions import ForbiddenError
 
 
 def ensure_address_owner(*, current_user_id: UUID, address_user_id: UUID) -> None:

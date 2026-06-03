@@ -3,8 +3,12 @@
 from uuid import UUID
 
 from apps.product_service.app.schemas import ProductResponse
-from ecommerce_cache.valkey_client import cache_delete, cache_get, cache_set
-from ecommerce_config.settings import settings
+from apps.product_service.app.infrastructure.cache.valkey_client import (
+    cache_delete,
+    cache_get,
+    cache_set,
+)
+from apps.product_service.app.infrastructure.config.settings import settings
 
 
 def _cache_key(product_id: UUID) -> str:

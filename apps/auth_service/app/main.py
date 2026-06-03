@@ -4,10 +4,12 @@ from fastapi import FastAPI
 from prometheus_client import make_asgi_app
 
 from apps.auth_service.app.api.routes import router as auth_router
-from ecommerce_config.settings import settings
-from ecommerce_observability.http_metrics import HTTPMetricsMiddleware
-from ecommerce_observability.logging import setup_logging
-from ecommerce_observability.tracing import setup_tracing
+from apps.auth_service.app.infrastructure.config.settings import settings
+from apps.auth_service.app.infrastructure.observability.http_metrics import (
+    HTTPMetricsMiddleware,
+)
+from apps.auth_service.app.infrastructure.observability.logging import setup_logging
+from apps.auth_service.app.infrastructure.observability.tracing import setup_tracing
 
 app = FastAPI(title="Auth Service")
 

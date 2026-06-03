@@ -4,11 +4,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, status
 
+from apps.payment_service.app.infrastructure.config.settings import settings
+from apps.payment_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.payment_service.app.infrastructure.database.repository import get_payment
+from apps.payment_service.app.schemas.common import ApiResponse
 from apps.payment_service.app.schemas.responses import PaymentResponse
-from ecommerce_config.settings import settings
-from ecommerce_contracts.common.schemas import ApiResponse
-from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 
 router = APIRouter()
 

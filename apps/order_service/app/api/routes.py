@@ -2,16 +2,18 @@
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from ecommerce_config.settings import settings
-from ecommerce_contracts.common.schemas import ApiResponse
-from ecommerce_errors.exceptions import ForbiddenError
-from ecommerce_observability.logging import get_logger
-from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.order_service.app.domain.exceptions import (
     CartNotFoundError,
     EmptyCartError,
 )
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.errors.exceptions import ForbiddenError
+from apps.order_service.app.infrastructure.observability.logging import get_logger
+from apps.order_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.order_service.app.schemas.requests import CreateOrderRequest
+from apps.order_service.app.schemas.common import ApiResponse
 from apps.order_service.app.application.services import (
     create_order_for_user,
     get_all_orders,

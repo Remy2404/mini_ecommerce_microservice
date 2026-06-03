@@ -1,10 +1,24 @@
-"""Product Service read-cache helpers."""
+"""Product Service cache helpers."""
 
-from apps.product_service.app.infrastructure.cache.product_cache import (
-    delete_product_cache,
-    get_product_cache,
-    set_product_cache,
+from apps.product_service.app.infrastructure.cache.valkey_client import (
+    acquire_lock,
+    cache_delete,
+    cache_get,
+    cache_set,
+    get_async_valkey_client,
+    get_valkey_client,
+    get_or_set_json,
+    release_lock,
 )
 
-__all__ = ["delete_product_cache", "get_product_cache", "set_product_cache"]
+__all__ = [
+    "acquire_lock",
+    "cache_delete",
+    "cache_get",
+    "cache_set",
+    "get_async_valkey_client",
+    "get_or_set_json",
+    "get_valkey_client",
+    "release_lock",
+]
 

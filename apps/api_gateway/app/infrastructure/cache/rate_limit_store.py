@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Request
 import valkey.asyncio as valkey
 
-from ecommerce_config.settings import settings
+from apps.api_gateway.app.infrastructure.config.settings import settings
 
 _valkey_client: valkey.Valkey | None = None
 
