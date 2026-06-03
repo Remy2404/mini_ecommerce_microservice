@@ -4,7 +4,7 @@ from uuid import uuid4
 import json
 import pytest
 
-from packages.contracts.events import (
+from ecommerce_contracts.events import (
     EventType,
     PaymentStatus,
     OrderCreatedEvent,
@@ -83,3 +83,4 @@ def test_domain_events_serialization(
 
     if "reason" in extra_payload:
         assert data["payload"]["reason"] == "Insufficient Funds"
+

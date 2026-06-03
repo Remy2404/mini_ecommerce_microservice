@@ -21,7 +21,7 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
     CartSnapshotItem,
 )
 from apps.product_service.app.schemas import ProductResponse
-from packages.config.settings import settings
+from ecommerce_config.settings import settings
 
 
 # ========== Test Data ==========
@@ -453,3 +453,4 @@ def test_e2e_complete_user_journey_login_to_order(monkeypatch) -> None:
     # Final Verification
     assert order.status == "PENDING"
     assert order.order_id is not None
+

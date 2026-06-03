@@ -48,3 +48,4 @@ def test_auth_cleanup_migration_drops_legacy_identity_tables() -> None:
     assert 'down_revision = "auth_202605280001"' in migration_text
     for table_name in LEGACY_AUTH_TABLES:
         assert f"DROP TABLE IF EXISTS {table_name}" in migration_text
+

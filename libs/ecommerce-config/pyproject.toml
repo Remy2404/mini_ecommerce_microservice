@@ -1,0 +1,14 @@
+[project]
+name = "ecommerce-config"
+version = "0.1.0"
+description = "Shared application settings for the mini ecommerce services."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+

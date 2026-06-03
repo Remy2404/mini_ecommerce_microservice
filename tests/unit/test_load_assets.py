@@ -29,3 +29,4 @@ def test_phase6_docker_runner_propagates_stage_configuration() -> None:
 def test_load_and_security_reports_exist() -> None:
     assert Path("tests/load/reports/load-test-report.md").exists()
     assert Path("tests/security/security-report.md").exists()
+

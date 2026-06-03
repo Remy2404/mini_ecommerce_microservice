@@ -50,3 +50,4 @@ class UserProfile(AuthBase):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     user: Mapped[User] = relationship(back_populates="profile")
+

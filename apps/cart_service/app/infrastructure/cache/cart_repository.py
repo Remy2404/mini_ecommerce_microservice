@@ -2,8 +2,8 @@ import json
 from decimal import Decimal
 from uuid import UUID
 
-from packages.cache.valkey_client import get_valkey_client
-from packages.config.settings import settings
+from ecommerce_cache.valkey_client import get_valkey_client
+from ecommerce_config.settings import settings
 from apps.cart_service.app.schemas import CartResponse
 
 CART_KEY_PREFIX = "cart"
@@ -79,3 +79,4 @@ def remove_cart_item(user_id: str, product_id: UUID) -> CartResponse:
     save_cart(updated_cart)
 
     return updated_cart
+

@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-from packages.security.certificate_validator import (
+from ecommerce_security.certificate_validator import (
     CertificateValidationError,
     validate_mtls_certificate_bundle,
 )
@@ -177,3 +177,4 @@ def test_validate_mtls_bundle_fails_when_files_missing(tmp_path) -> None:
             client_cert_path=str(missing_path),
             client_key_path=str(missing_path),
         )
+

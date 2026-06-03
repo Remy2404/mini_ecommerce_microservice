@@ -9,8 +9,10 @@ New code, tests, docs, and local commands import from `apps.*`.
 ## Service Layers
 
 - `app/api`: FastAPI routes and HTTP-only dependencies.
-- `app/application`: use cases and orchestration.
-- `app/domain`: pure business exceptions and entities(models).
+- `app/application`: use cases and orchestration. Keep it flat unless a
+  service has enough code to justify subpackages.
+- `app/domain`: pure business exceptions, entities, and policies. Keep the
+  default shape flat with `entities.py`, `exceptions.py`, and `policies.py`.
 - `app/infrastructure`: database, cache, HTTP clients, messaging, and security adapters.
 - `app/schemas`: request and response DTOs.
 - `workers`: background process entrypoints.

@@ -9,7 +9,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from apps.auth_service.app.infrastructure.database.models import AuthBase
-from packages.config.settings import settings
+from ecommerce_config.settings import settings
 
 config = context.config
 
@@ -73,3 +73,4 @@ else:
     import asyncio
 
     asyncio.run(run_migrations_online())
+

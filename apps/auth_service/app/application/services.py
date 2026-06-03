@@ -2,7 +2,7 @@
 
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import RegisterUserResponse
-from packages.security.wso2_scim import register_wso2_user
+from ecommerce_security.wso2_scim import register_wso2_user
 
 
 class AuthService:
@@ -25,3 +25,4 @@ class AuthService:
 
 def get_auth_service() -> AuthService:
     return AuthService()
+

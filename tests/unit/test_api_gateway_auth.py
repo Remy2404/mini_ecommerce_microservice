@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-from packages.config.settings import settings
+from ecommerce_config.settings import settings
 from apps.api_gateway.app.infrastructure.security import wso2_client as auth
 
 
@@ -153,3 +153,4 @@ def test_auth_enabled_inactive_opaque_access_token_returns_401(monkeypatch) -> N
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Invalid token"
+

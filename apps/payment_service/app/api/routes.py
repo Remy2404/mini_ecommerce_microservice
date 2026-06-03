@@ -6,9 +6,9 @@ from fastapi import APIRouter, Header, HTTPException, status
 
 from apps.payment_service.app.infrastructure.database.repository import get_payment
 from apps.payment_service.app.schemas.responses import PaymentResponse
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+from ecommerce_config.settings import settings
+from ecommerce_contracts.common.schemas import ApiResponse
+from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 
 router = APIRouter()
 
@@ -53,3 +53,4 @@ async def get_payment_endpoint(
         message="Payment fetched successfully",
         data=payment,
     )
+

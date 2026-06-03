@@ -1,5 +1,5 @@
-from packages.contracts.topics import ExchangeName, QueueName
-from packages.messaging.broker import (
+from ecommerce_contracts.topics import ExchangeName, QueueName
+from ecommerce_messaging.broker import (
     broker,
     cart_restore_queue,
     dead_letter_exchange,
@@ -32,3 +32,4 @@ def test_queue_names_are_correct():
     assert payment_success_retry_queue.name == QueueName.PAYMENT_SUCCESS_RETRY
     assert payment_failed_retry_queue.name == QueueName.PAYMENT_FAILED_RETRY
     assert dead_letter_queue.name == QueueName.DEAD_LETTER
+

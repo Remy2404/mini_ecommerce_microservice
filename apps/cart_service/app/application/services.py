@@ -95,3 +95,4 @@ def delete_cart_item(user_id: str, product_id: UUID) -> CartResponse:
 
 def delete_cart(user_id: str) -> None:
     clear_cart(user_id)
+

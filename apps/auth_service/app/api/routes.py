@@ -12,11 +12,11 @@ from apps.auth_service.app.schemas.responses import (
     Wso2UsersListResponse,
 )
 from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse
-from packages.observability.logging import get_logger
-from packages.security.wso2_login import request_wso2_password_token
-from packages.security.wso2_scim import (
+from ecommerce_config.settings import settings
+from ecommerce_contracts.common.schemas import ApiResponse
+from ecommerce_observability.logging import get_logger
+from ecommerce_security.wso2_login import request_wso2_password_token
+from ecommerce_security.wso2_scim import (
     WSO2SCIMError,
     filter_wso2_users,
     get_wso2_user_by_id,
@@ -215,3 +215,4 @@ async def login_user(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
         password=request.password.get_secret_value(),
         scope=request.scope,
     )
+

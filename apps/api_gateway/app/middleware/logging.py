@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from packages.observability.logging import get_logger
+from ecommerce_observability.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -31,3 +31,4 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         )
 
         return response
+

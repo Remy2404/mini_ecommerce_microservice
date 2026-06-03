@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from apps.api_gateway.app.schemas.requests import WSO2PasswordLoginRequest
-from packages.security.wso2_login import request_wso2_password_token
+from ecommerce_security.wso2_login import request_wso2_password_token
 
 router = APIRouter()
 
@@ -18,3 +18,4 @@ async def wso2_login(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
         password=request.password.get_secret_value(),
         scope=request.scope,
     )
+

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from apps.product_service.app.main import app
 from apps.product_service.app.infrastructure.database.repository import _product_response
-from packages.storage.object_storage import UploadedObject
+from ecommerce_storage.object_storage import UploadedObject
 
 
 @pytest.fixture(autouse=True)
@@ -60,13 +60,13 @@ def test_upload_image_unauthorized() -> None:
 
 def test_upload_image_invalid_bytes(monkeypatch) -> None:
     # Patch process_image_bytes to raise validation error
-    from packages.storage.image_processor import ImageValidationError
+    from ecommerce_storage.image_processor import ImageValidationError
 
     async def _fake_validate(token):
         return {"sub": "user-1", "scope": "openid profile product_image_write"}
 
-    with patch("packages.storage.image_processor.process_image_bytes", side_effect=ImageValidationError("Invalid image")):
-        with patch("packages.security.jwt_validator.validate_wso2_access_token", new=_fake_validate):
+    with patch("ecommerce_storage.image_processor.process_image_bytes", side_effect=ImageValidationError("Invalid image")):
+        with patch("ecommerce_security.jwt_validator.validate_wso2_access_token", new=_fake_validate):
             with TestClient(app) as client:
                 response = client.put(
                     "/products/00000000-0000-0000-0000-000000000000/image",
@@ -86,8 +86,8 @@ def test_upload_image_success_triggers_cleanup(monkeypatch):
     async def _fake_validate(token):
         return {"sub": "user-1", "scope": "openid profile product_image_write"}
 
-    monkeypatch.setattr("packages.storage.image_processor.process_image_bytes", lambda data: (processed_buf, "image/webp"))
-    monkeypatch.setattr("packages.storage.image_processor.build_image_object_key", lambda prefix, ct: "products/1.webp")
+    monkeypatch.setattr("ecommerce_storage.image_processor.process_image_bytes", lambda data: (processed_buf, "image/webp"))
+    monkeypatch.setattr("ecommerce_storage.image_processor.build_image_object_key", lambda prefix, ct: "products/1.webp")
 
     class FakeStorage:
         def __init__(self):
@@ -107,10 +107,10 @@ def test_upload_image_success_triggers_cleanup(monkeypatch):
     async def fake_update_product_image(product_id, new_object_key):
         return "products/old.webp"
 
-    monkeypatch.setattr("packages.storage.object_storage.get_object_storage_client", lambda: fake_storage)
+    monkeypatch.setattr("ecommerce_storage.object_storage.get_object_storage_client", lambda: fake_storage)
     monkeypatch.setattr("apps.product_service.app.infrastructure.database.repository.update_product_image", AsyncMock(side_effect=fake_update_product_image))
     # monkeypatch.setattr uses (target, value) signature; don't pass 'new=' here
-    monkeypatch.setattr("packages.security.jwt_validator.validate_wso2_access_token", _fake_validate)
+    monkeypatch.setattr("ecommerce_security.jwt_validator.validate_wso2_access_token", _fake_validate)
 
     with TestClient(app) as client:
         response = client.put(
@@ -129,7 +129,7 @@ def test_upload_image_forbidden_without_required_scope() -> None:
     async def _fake_validate(token):
         return {"sub": "user-1", "scope": "openid profile email"}
 
-    with patch("packages.security.jwt_validator.validate_wso2_access_token", new=_fake_validate):
+    with patch("ecommerce_security.jwt_validator.validate_wso2_access_token", new=_fake_validate):
         with TestClient(app) as client:
             response = client.put(
                 "/products/00000000-0000-0000-0000-000000000000/image",
@@ -148,12 +148,12 @@ def test_upload_image_forbidden_without_required_scope() -> None:
 @pytest.mark.skipif(os.environ.get("RUN_MINIO_INTEGRATION") != "true", reason="MinIO integration not enabled")
 def test_minio_integration_upload_and_delete():
     # This test requires a running MinIO instance and valid settings in env
-    from packages.storage.object_storage import get_object_storage_client
+    from ecommerce_storage.object_storage import get_object_storage_client
 
     client = get_object_storage_client()
     data = _small_png_bytes()
     # Process using real processor
-    from packages.storage.image_processor import process_image_bytes
+    from ecommerce_storage.image_processor import process_image_bytes
 
     processed_buf, content_type = process_image_bytes(data)
     object_key = f"tests/{os.getpid()}_integration.webp"
@@ -164,3 +164,4 @@ def test_minio_integration_upload_and_delete():
 
     # Clean up
     client.delete_object(object_key)
+

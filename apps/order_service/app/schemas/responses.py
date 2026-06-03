@@ -17,3 +17,4 @@ class OrderItemResponse(BaseModel):
 class OrderSummaryResponse(BaseModel):
     order_id: UUID
     status: str
+

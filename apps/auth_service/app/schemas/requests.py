@@ -22,3 +22,4 @@ class RegisterUserRequest(BaseModel):
     password: SecretStr = Field(min_length=8)
     first_name: str = Field(min_length=1, max_length=80)
     last_name: str = Field(min_length=1, max_length=80)
+

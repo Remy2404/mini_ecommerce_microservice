@@ -1,1 +1,2 @@
 """Order infrastructure adapters."""
+

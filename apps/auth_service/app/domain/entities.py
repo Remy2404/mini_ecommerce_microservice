@@ -9,3 +9,4 @@ class AuthenticatedUser:
     user_id: UUID
     email: str
     roles: tuple[str, ...]
+

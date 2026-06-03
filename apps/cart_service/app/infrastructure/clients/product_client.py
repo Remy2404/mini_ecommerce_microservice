@@ -9,8 +9,8 @@ from apps.cart_service.app.domain.exceptions import (
     ProductNotFoundError,
     ProductServiceUnavailableError,
 )
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse, ProductResponse
+from ecommerce_config.settings import settings
+from ecommerce_contracts.common.schemas import ApiResponse, ProductResponse
 
 
 def _product_url(product_id: UUID) -> str:
@@ -51,3 +51,4 @@ async def fetch_product(product_id: UUID) -> ProductResponse:
         raise ProductServiceUnavailableError
 
     return product
+

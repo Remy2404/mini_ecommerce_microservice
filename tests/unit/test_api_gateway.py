@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from apps.api_gateway.app.api.dependencies import (
     validate_token as gateway_validate_token,
 )
-from packages.config.settings import settings
+from ecommerce_config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 
@@ -355,3 +355,4 @@ def test_no_open_proxy_behavior(monkeypatch) -> None:
     assert FakeAsyncClient.calls[0]["url"] == (
         "http://product-service/products/http://evil.example/resource"
     )
+

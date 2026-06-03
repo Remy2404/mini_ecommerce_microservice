@@ -14,3 +14,4 @@ class PaymentResponse(BaseModel):
     amount: Decimal = Field(ge=0)
     currency: str = "USD"
     failure_reason: str | None = None
+

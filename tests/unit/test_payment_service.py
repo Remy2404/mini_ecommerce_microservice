@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from packages.contracts.events import OrderCreatedEvent, OrderCreatedPayload
+from ecommerce_contracts.events import OrderCreatedEvent, OrderCreatedPayload
 from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
     process_payment,
 )
@@ -94,3 +94,4 @@ def test_process_payment_persists_failure_before_publishing() -> None:
     assert saved_payment["source_event_id"] == event.event_id
     assert saved_payment["routing_key"] == "payment.failed.v1"
     publish_pending_mock.assert_awaited_once()
+

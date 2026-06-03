@@ -8,8 +8,8 @@ from apps.cart_service.app.application import services as cart_service
 from apps.cart_service.app.infrastructure.clients import product_client
 from apps.cart_service.app.main import app
 from apps.cart_service.app.schemas import CartItemResponse, CartResponse
-from packages.config.settings import settings
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+from ecommerce_config.settings import settings
+from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 
 PRODUCT_ID = uuid4()
 OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}
@@ -252,3 +252,4 @@ def test_existing_cart_item_is_repriced_from_trusted_product(monkeypatch) -> Non
     assert _decimal(item["subtotal"]) == Decimal("24.75")
     assert _decimal(response.json()["data"]["total_amount"]) == Decimal("24.75")
     assert saved_carts[0].items[0].unit_price == Decimal("8.25")
+

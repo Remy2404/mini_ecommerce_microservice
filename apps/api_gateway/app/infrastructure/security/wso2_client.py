@@ -4,8 +4,8 @@ from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
-from packages.config.settings import settings
-from packages.security.jwt_validator import (
+from ecommerce_config.settings import settings
+from ecommerce_security.jwt_validator import (
     AuthProviderUnavailableError,
     TokenValidationError,
 )
@@ -118,3 +118,4 @@ async def validate_token(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service unavailable",
         ) from exc
+

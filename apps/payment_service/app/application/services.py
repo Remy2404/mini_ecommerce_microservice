@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from packages.config.settings import settings
+from ecommerce_config.settings import settings
 
 
 @dataclass(frozen=True)
@@ -20,3 +20,4 @@ def process_fake_payment(*, amount: Decimal, random_value: float) -> PaymentDeci
         return PaymentDecision(True)
 
     return PaymentDecision(False, "Simulated payment failure")
+

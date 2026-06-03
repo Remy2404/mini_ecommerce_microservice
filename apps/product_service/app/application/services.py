@@ -11,7 +11,7 @@ from apps.product_service.app.schemas import (
     CreateProductRequest,
     ProductResponse,
 )
-from packages.storage import image_processor, object_storage
+from ecommerce_storage import image_processor, object_storage
 from apps.product_service.app.infrastructure.cache.product_cache import (
     delete_product_cache,
 )
@@ -105,3 +105,4 @@ async def upload_product_image(*, product_id: UUID, data: bytes):
 
     # Build public URL and return
     return storage.build_public_url(uploaded.object_key)
+

@@ -10,10 +10,10 @@ from apps.auth_service.app.application.services import AuthService
 from apps.auth_service.app.main import app
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import RegisterUserResponse
-from packages.config.settings import settings
-from packages.security import wso2_login, wso2_scim
-from packages.security.passwords import hash_password, verify_password
-from packages.security.wso2_scim import WSO2SCIMError, register_wso2_user
+from ecommerce_config.settings import settings
+from ecommerce_security import wso2_login, wso2_scim
+from ecommerce_security.passwords import hash_password, verify_password
+from ecommerce_security.wso2_scim import WSO2SCIMError, register_wso2_user
 
 
 class FakeWSO2AsyncClient:
@@ -844,3 +844,4 @@ def test_get_user_route_returns_envelope(monkeypatch) -> None:
     assert response.json()["message"] == "User retrieved successfully"
     assert response.json()["data"]["user"]["id"] == "wso2-user-id"
     assert captured == {"user_id": "wso2-user-id", "request_id": "request-123"}
+

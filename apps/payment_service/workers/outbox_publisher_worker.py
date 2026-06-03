@@ -2,9 +2,9 @@
 
 import asyncio
 
-from packages.config.settings import settings
-from packages.observability.logging import get_logger, setup_logging
-from packages.observability.tracing import setup_tracing
+from ecommerce_config.settings import settings
+from ecommerce_observability.logging import get_logger, setup_logging
+from ecommerce_observability.tracing import setup_tracing
 
 from apps.payment_service.app.infrastructure.messaging.outbox_publisher import (
     publish_pending_payment_events,
@@ -25,3 +25,4 @@ async def main(poll_interval_seconds: float = 2.0) -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+

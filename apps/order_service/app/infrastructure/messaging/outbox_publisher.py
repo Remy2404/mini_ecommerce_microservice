@@ -1,8 +1,8 @@
 """Durable outbox publisher for Order Service events."""
 
-from packages.config.settings import settings
-from packages.contracts.order.events import OrderCreatedEvent
-from packages.observability.logging import get_logger
+from ecommerce_config.settings import settings
+from ecommerce_contracts.order.events import OrderCreatedEvent
+from ecommerce_observability.logging import get_logger
 
 from apps.order_service.app.infrastructure.database.repository import (
     claim_pending_outbox_events,
@@ -41,3 +41,4 @@ async def publish_pending_order_events(limit: int = 25) -> int:
             )
 
     return published
+

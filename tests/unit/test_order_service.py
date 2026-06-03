@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 
 from apps.order_service.app.application import services as order_services
 from apps.order_service.app.main import app
-from packages.config.settings import settings
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+from ecommerce_config.settings import settings
+from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 
 OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}
 
@@ -85,7 +85,7 @@ def test_create_order_endpoint_returns_created_order() -> None:
 def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_apply_result
 ) -> None:
-    from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
+    from ecommerce_contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
     from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
         handle_payment_result,
     )
@@ -244,3 +244,4 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
 
     assert response.status_code == 200
     assert "http_request_total" in response.text
+

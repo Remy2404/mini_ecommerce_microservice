@@ -1,15 +1,15 @@
 import asyncio
 
-from packages.config.settings import settings
-from packages.contracts.payment.events import PaymentFailedEvent, PaymentSuccessEvent
-from packages.contracts.common.schemas import OrderStatus
-from packages.contracts.payment.topics import QueueName, RoutingKey
-from packages.messaging.broker import broker, ecommerce_exchange, payment_result_queue
-from packages.messaging.retry import publish_retry_or_dlq
-from packages.observability.logging import get_logger, setup_logging
-from packages.observability.metrics import order_cancelled_total, order_confirmed_total
-from packages.observability.tracing import add_span_attributes, setup_tracing
-from packages.cache.valkey_client import get_valkey_client
+from ecommerce_config.settings import settings
+from ecommerce_contracts.payment.events import PaymentFailedEvent, PaymentSuccessEvent
+from ecommerce_contracts.common.schemas import OrderStatus
+from ecommerce_contracts.payment.topics import QueueName, RoutingKey
+from ecommerce_messaging.broker import broker, ecommerce_exchange, payment_result_queue
+from ecommerce_messaging.retry import publish_retry_or_dlq
+from ecommerce_observability.logging import get_logger, setup_logging
+from ecommerce_observability.metrics import order_cancelled_total, order_confirmed_total
+from ecommerce_observability.tracing import add_span_attributes, setup_tracing
+from ecommerce_cache.valkey_client import get_valkey_client
 from apps.order_service.app.infrastructure.database.repository import (
     apply_payment_result_once,
 )
@@ -143,3 +143,4 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+

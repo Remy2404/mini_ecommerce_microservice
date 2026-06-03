@@ -13,8 +13,8 @@ from apps.payment_service.app.infrastructure.database.models import (
     Payment,
 )
 from apps.payment_service.app.schemas.responses import PaymentResponse
-from packages.config.settings import settings
-from packages.database.session import session_scope
+from ecommerce_config.settings import settings
+from ecommerce_database.session import session_scope
 
 
 @dataclass(frozen=True)
@@ -193,3 +193,4 @@ async def get_payment(payment_id: UUID) -> PaymentResponse | None:
         currency=payment.currency,
         failure_reason=payment.failure_reason,
     )
+

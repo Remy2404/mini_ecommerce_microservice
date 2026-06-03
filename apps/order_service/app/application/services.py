@@ -15,17 +15,17 @@ from apps.order_service.app.infrastructure.database.repository import (
 from apps.order_service.app.infrastructure.messaging.outbox_publisher import (
     publish_pending_order_events,
 )
-from packages.config.settings import settings
-from packages.contracts.order.events import OrderCreatedEvent, OrderCreatedPayload
-from packages.contracts.common.schemas import OrderStatus
-from packages.contracts.order.topics import RoutingKey
-from packages.errors.exceptions import ForbiddenError
-from packages.observability.logging import get_logger
-from packages.observability.metrics import (
+from ecommerce_config.settings import settings
+from ecommerce_contracts.order.events import OrderCreatedEvent, OrderCreatedPayload
+from ecommerce_contracts.common.schemas import OrderStatus
+from ecommerce_contracts.order.topics import RoutingKey
+from ecommerce_errors.exceptions import ForbiddenError
+from ecommerce_observability.logging import get_logger
+from ecommerce_observability.metrics import (
     order_created_total,
     rabbitmq_message_published_total,
 )
-from packages.observability.tracing import add_span_attributes
+from ecommerce_observability.tracing import add_span_attributes
 
 
 logger = get_logger(__name__)
@@ -144,3 +144,4 @@ async def dump_order_state() -> str:
         indent=2,
         sort_keys=True,
     )
+

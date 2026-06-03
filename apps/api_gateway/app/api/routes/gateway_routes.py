@@ -22,11 +22,11 @@ from apps.api_gateway.app.schemas.responses import (
     GatewayWso2UsersListResponse,
     WSO2TokenResponse,
 )
-from packages.config.settings import settings
-from packages.errors.exceptions import ForbiddenError
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
-from packages.security.permissions import require_owner_or_role
-from packages.security.wso2_login import request_wso2_password_token
+from ecommerce_config.settings import settings
+from ecommerce_errors.exceptions import ForbiddenError
+from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
+from ecommerce_security.permissions import require_owner_or_role
+from ecommerce_security.wso2_login import request_wso2_password_token
 
 router = APIRouter()
 
@@ -447,3 +447,4 @@ async def get_payment(
         request,
         extra_headers=_owner_headers(payload),
     )
+

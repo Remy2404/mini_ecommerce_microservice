@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from packages.contracts.events import (
+from ecommerce_contracts.events import (
     OrderCreatedEvent,
     OrderCreatedPayload,
     PaymentSuccessEvent,
@@ -92,3 +92,4 @@ def test_payment_consumer_skips_duplicate_order_created_after_inbox_record() -> 
 
     assert save_once.await_count == 2
     publish_pending.assert_awaited_once()
+

@@ -42,3 +42,4 @@ def test_list_categories_endpoint_success() -> None:
 
     assert response.status_code == 200
     assert response.json()["data"][0]["name"] == "books"
+

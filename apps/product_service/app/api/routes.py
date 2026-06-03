@@ -4,10 +4,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Depends, Header
 
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse
-from packages.observability.logging import get_logger
-from packages.observability.tracing import add_span_attributes
+from ecommerce_config.settings import settings
+from ecommerce_contracts.common.schemas import ApiResponse
+from ecommerce_observability.logging import get_logger
+from ecommerce_observability.tracing import add_span_attributes
 from apps.product_service.app.schemas import (
     CategoryResponse,
     CreateCategoryRequest,
@@ -22,10 +22,10 @@ from apps.product_service.app.application.services import (
     find_products,
     upload_product_image,
 )
-from packages.errors.exceptions import to_http_exception
-from packages.security.permissions import require_scope
-from packages.security import jwt_validator
-from packages.security.jwt_validator import TokenValidationError
+from ecommerce_errors.exceptions import to_http_exception
+from ecommerce_security.permissions import require_scope
+from ecommerce_security import jwt_validator
+from ecommerce_security.jwt_validator import TokenValidationError
 
 router = APIRouter()
 
@@ -180,3 +180,4 @@ async def upload_product_image_endpoint(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Image upload failed")
 
     return ApiResponse(success=True, message="Image uploaded", data={"image_url": image_url})
+

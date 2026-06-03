@@ -25,8 +25,8 @@ from apps.payment_service.app.infrastructure.messaging.order_created_consumer im
     process_payment,
 )
 from apps.product_service.app.schemas import ProductResponse
-from packages.config.settings import settings
-from packages.contracts.events import (
+from ecommerce_config.settings import settings
+from ecommerce_contracts.events import (
     OrderCreatedEvent,
     OrderCreatedPayload,
     PaymentFailedEvent,
@@ -316,3 +316,4 @@ async def _return_and_record_async(target: list, value, return_value):
 
 async def _return_async(value):
     return value
+

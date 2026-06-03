@@ -2,7 +2,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from packages.observability.logging import get_logger
+from ecommerce_observability.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -23,3 +23,4 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 content={"detail": "Internal gateway error"},
             )
+

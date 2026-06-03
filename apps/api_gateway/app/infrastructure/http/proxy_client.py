@@ -2,7 +2,7 @@ import httpx
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from packages.config.settings import settings
+from ecommerce_config.settings import settings
 
 SERVICE_MAP = {
     "auth": "auth_service_url",
@@ -156,3 +156,4 @@ async def forward_request(
         headers=_forward_response_headers(upstream),
         media_type=upstream.headers.get("content-type"),
     )
+

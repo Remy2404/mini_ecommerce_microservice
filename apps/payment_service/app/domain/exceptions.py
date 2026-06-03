@@ -7,3 +7,4 @@ class DuplicatePaymentEventError(Exception):
 
 class PaymentNotFoundError(Exception):
     """Raised when a payment row does not exist."""
+

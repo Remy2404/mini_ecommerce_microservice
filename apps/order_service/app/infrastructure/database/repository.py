@@ -14,8 +14,8 @@ from apps.order_service.app.infrastructure.database.models import (
     OrderItem,
     OutboxEvent,
 )
-from packages.config.settings import settings
-from packages.database.session import session_scope
+from ecommerce_config.settings import settings
+from ecommerce_database.session import session_scope
 
 
 @dataclass(frozen=True)
@@ -262,3 +262,4 @@ async def list_order_statuses(user_id: str | None = None) -> dict[str, str]:
 async def clear_orders() -> None:
     async with session_scope(settings.orders_database_url) as session:
         await session.execute(delete(Order))
+

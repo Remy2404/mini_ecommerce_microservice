@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from apps.product_service.app.schemas.requests import CreateProductRequest
-from packages.contracts.schemas import ApiResponse, OrderResponse, OrderStatus
+from ecommerce_contracts.schemas import ApiResponse, OrderResponse, OrderStatus
 
 
 def test_order_response_schema():
@@ -42,3 +42,4 @@ def test_create_product_request_rejects_negative_price() -> None:
             stock_quantity=1,
             category="books",
         )
+

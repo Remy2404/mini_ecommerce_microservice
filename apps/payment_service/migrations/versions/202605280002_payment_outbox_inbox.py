@@ -77,3 +77,4 @@ def downgrade() -> None:
     op.drop_index("ix_payment_outbox_routing_key", table_name="outbox_events")
     op.drop_index("ix_payment_outbox_event_type", table_name="outbox_events")
     op.drop_table("outbox_events")
+

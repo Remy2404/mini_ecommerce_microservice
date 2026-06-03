@@ -2,11 +2,11 @@
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse
-from packages.errors.exceptions import ForbiddenError
-from packages.observability.logging import get_logger
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+from ecommerce_config.settings import settings
+from ecommerce_contracts.common.schemas import ApiResponse
+from ecommerce_errors.exceptions import ForbiddenError
+from ecommerce_observability.logging import get_logger
+from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.order_service.app.domain.exceptions import (
     CartNotFoundError,
     EmptyCartError,
@@ -126,3 +126,4 @@ async def list_orders(
             user_id=_require_authenticated_user_id(authenticated_user_id),
         ),
     )
+

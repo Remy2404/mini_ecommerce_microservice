@@ -6,3 +6,4 @@ from apps.payment_service.app.infrastructure.messaging.order_created_consumer im
 )
 
 __all__ = ["main", "process_payment"]
+

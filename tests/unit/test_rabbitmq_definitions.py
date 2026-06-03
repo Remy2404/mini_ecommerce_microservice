@@ -18,3 +18,4 @@ def test_rabbitmq_definitions_include_retry_and_dlq_topology() -> None:
     assert "order.created.retry.v1" in binding_keys
     assert "payment.succeeded.retry.v1" in binding_keys
     assert "payment.failed.retry.v1" in binding_keys
+

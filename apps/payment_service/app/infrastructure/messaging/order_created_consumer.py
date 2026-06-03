@@ -2,25 +2,25 @@ import asyncio
 import random
 from uuid import uuid4
 
-from packages.config.settings import settings
-from packages.contracts.order.events import OrderCreatedEvent
-from packages.contracts.payment.events import (
+from ecommerce_config.settings import settings
+from ecommerce_contracts.order.events import OrderCreatedEvent
+from ecommerce_contracts.payment.events import (
     PaymentFailedEvent,
     PaymentFailedPayload,
     PaymentSuccessEvent,
     PaymentSuccessPayload,
 )
-from packages.contracts.payment.topics import QueueName, RoutingKey
-from packages.messaging.broker import broker, ecommerce_exchange, order_created_queue
-from packages.messaging.retry import publish_retry_or_dlq
-from packages.observability.logging import get_logger, setup_logging
-from packages.observability.metrics import (
+from ecommerce_contracts.payment.topics import QueueName, RoutingKey
+from ecommerce_messaging.broker import broker, ecommerce_exchange, order_created_queue
+from ecommerce_messaging.retry import publish_retry_or_dlq
+from ecommerce_observability.logging import get_logger, setup_logging
+from ecommerce_observability.metrics import (
     payment_failed_total,
     payment_success_total,
     rabbitmq_message_consumed_total,
     rabbitmq_message_published_total,
 )
-from packages.observability.tracing import add_span_attributes, setup_tracing
+from ecommerce_observability.tracing import add_span_attributes, setup_tracing
 from apps.payment_service.app.application.services import process_fake_payment
 from apps.payment_service.app.infrastructure.cache.idempotency import (
     acquire_payment_event_lock,
@@ -231,3 +231,4 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+

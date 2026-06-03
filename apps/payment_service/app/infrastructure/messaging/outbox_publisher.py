@@ -1,9 +1,9 @@
 """Durable outbox publisher for Payment Service events."""
 
-from packages.contracts.payment.events import PaymentFailedEvent, PaymentSuccessEvent
-from packages.contracts.payment.topics import RoutingKey
-from packages.messaging.broker import broker, ecommerce_exchange
-from packages.observability.logging import get_logger
+from ecommerce_contracts.payment.events import PaymentFailedEvent, PaymentSuccessEvent
+from ecommerce_contracts.payment.topics import RoutingKey
+from ecommerce_messaging.broker import broker, ecommerce_exchange
+from ecommerce_observability.logging import get_logger
 
 from apps.payment_service.app.infrastructure.database.repository import (
     claim_pending_outbox_events,
@@ -45,3 +45,4 @@ async def publish_pending_payment_events(limit: int = 25) -> int:
             )
 
     return published
+

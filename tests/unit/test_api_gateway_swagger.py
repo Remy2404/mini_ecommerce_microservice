@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
-from packages.config.settings import settings
-from packages.security import wso2_login
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+from ecommerce_config.settings import settings
+from ecommerce_security import wso2_login
+from ecommerce_security.headers import AUTHENTICATED_USER_ID_HEADER
 
 
 class FakeAsyncClient:
@@ -525,3 +525,4 @@ def test_user_owned_post_routes_reject_client_supplied_user_id(
     assert response.status_code == 403
     assert response.json() == {"detail": "Forbidden"}
     assert FakeAsyncClient.calls == []
+

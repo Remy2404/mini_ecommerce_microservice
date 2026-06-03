@@ -5,9 +5,9 @@ from sqlalchemy.orm import selectinload
 
 from apps.product_service.app.infrastructure.database.models import Category, Product
 from apps.product_service.app.schemas import CategoryResponse, ProductResponse
-from packages.config.settings import settings
-from packages.database.session import session_scope
-from packages.storage.object_storage import build_public_url
+from ecommerce_config.settings import settings
+from ecommerce_database.session import session_scope
+from ecommerce_storage.object_storage import build_public_url
 
 
 def _product_response(product: Product) -> ProductResponse:
@@ -129,3 +129,4 @@ async def update_product_image(product_id: UUID, new_object_key: str) -> str | N
         await session.flush()
 
     return old_key
+

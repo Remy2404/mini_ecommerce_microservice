@@ -4,3 +4,4 @@ class CartNotFoundError(Exception):
 
 class EmptyCartError(Exception):
     """Raised when an order is created from an empty cart."""
+

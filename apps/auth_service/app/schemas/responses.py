@@ -47,3 +47,4 @@ class Wso2UserDetailResponse(BaseModel):
     """Wrapper for a single WSO2 user detail lookup."""
 
     user: Wso2UserProfile
+

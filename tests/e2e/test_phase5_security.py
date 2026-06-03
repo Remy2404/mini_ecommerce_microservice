@@ -26,8 +26,8 @@ from apps.api_gateway.app.infrastructure.http import proxy_client
 from apps.api_gateway.app.infrastructure.security import wso2_client
 from apps.api_gateway.app.main import app as gateway_app
 from apps.cart_service.app.main import app as cart_app
-from packages.config.settings import settings
-from packages.security.jwt_validator import TokenValidationError
+from ecommerce_config.settings import settings
+from ecommerce_security.jwt_validator import TokenValidationError
 
 
 # ============================================================================
@@ -597,3 +597,4 @@ def test_p5_security_matrix_coverage() -> None:
     assert len(coverage) == 8, "All 8 Phase 5 security scenarios must be covered"
     for scenario, tests in coverage.items():
         assert tests, f"{scenario} has no tests defined"
+

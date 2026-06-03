@@ -13,3 +13,4 @@ class PaymentEntity:
     amount: Decimal
     currency: str
     status: str
+

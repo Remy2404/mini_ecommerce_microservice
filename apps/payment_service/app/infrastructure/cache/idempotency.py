@@ -1,6 +1,6 @@
 """Valkey-backed idempotency lock for payment events."""
 
-from packages.cache.valkey_client import acquire_lock, release_lock
+from ecommerce_cache.valkey_client import acquire_lock, release_lock
 
 
 def _lock_key(event_id: str) -> str:
@@ -19,3 +19,4 @@ async def release_payment_event_lock(event_id: str) -> None:
         await release_lock(_lock_key(event_id))
     except Exception:
         return
+
