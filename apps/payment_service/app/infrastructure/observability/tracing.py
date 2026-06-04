@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+import os
 from typing import Any
 
 from fastapi import FastAPI
@@ -16,6 +17,10 @@ logger = get_logger(__name__)
 _tracing_configured = False
 
 
+def _otel_tracing_disabled() -> bool:
+    return os.getenv("OTEL_TRACES_EXPORTER", "").lower() == "none"
+
+
 def setup_tracing(service_name: str, app: FastAPI | None = None) -> None:
     global _tracing_configured
 
@@ -23,6 +28,13 @@ def setup_tracing(service_name: str, app: FastAPI | None = None) -> None:
         if app is not None:
             FastAPIInstrumentor.instrument_app(app)
         logger.info("Tracing already configured", service_name=service_name)
+        return
+
+    if _otel_tracing_disabled():
+        _tracing_configured = True
+        if app is not None:
+            FastAPIInstrumentor.instrument_app(app)
+        logger.info("OpenTelemetry tracing disabled", service_name=service_name)
         return
 
     resource = Resource.create(

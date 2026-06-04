@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from apps.payment_service.app.domain.policies import ensure_payable_amount
 from apps.payment_service.app.infrastructure.config.settings import settings
 
 
@@ -13,8 +14,10 @@ class PaymentDecision:
 
 
 def process_fake_payment(*, amount: Decimal, random_value: float) -> PaymentDecision:
-    if amount <= 0:
-        return PaymentDecision(False, "Invalid payment amount")
+    try:
+        ensure_payable_amount(amount)
+    except ValueError as exc:
+        return PaymentDecision(False, str(exc))
 
     if random_value <= settings.payment_success_rate:
         return PaymentDecision(True)

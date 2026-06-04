@@ -34,6 +34,7 @@ from apps.payment_service.app.infrastructure.observability.tracing import (
     add_span_attributes,
     setup_tracing,
 )
+from apps.payment_service.app.domain.entities import Payment
 from apps.payment_service.app.application.services import process_fake_payment
 from apps.payment_service.app.schemas.events import (
     OrderCreatedEvent,
@@ -101,6 +102,20 @@ async def _process_payment_once(event: OrderCreatedEvent) -> None:
         random_value=random.random(),
     )
     is_success = decision.succeeded
+    payment_id = uuid4()
+    payment = Payment.create(
+        payment_id=payment_id,
+        order_id=event.payload.order_id,
+        user_id=event.payload.user_id,
+        amount=event.payload.amount,
+        currency=event.payload.currency,
+        correlation_id=event.correlation_id,
+    )
+
+    if is_success:
+        payment.succeed()
+    else:
+        payment.fail(decision.failure_reason)
 
     add_span_attributes(
         {
@@ -111,29 +126,28 @@ async def _process_payment_once(event: OrderCreatedEvent) -> None:
     )
 
     if is_success:
-        payment_id = uuid4()
         payment_event = PaymentSuccessEvent(
             correlation_id=event.correlation_id,
             trace_id=event.trace_id,
             payload=PaymentSuccessPayload(
-                payment_id=payment_id,
+                payment_id=payment.payment_id.value,
                 order_id=event.payload.order_id,
                 user_id=event.payload.user_id,
-                amount=event.payload.amount,
-                currency=event.payload.currency,
+                amount=payment.amount.amount,
+                currency=payment.amount.currency,
             ),
         )
 
         saved = await save_payment_with_outbox_once(
             source_event_id=event.event_id,
             source_event_type=event.event_type,
-            payment_id=payment_id,
+            payment_id=payment.payment_id.value,
             order_id=event.payload.order_id,
             user_id=event.payload.user_id,
-            status=payment_event.payload.status,
-            amount=event.payload.amount,
-            currency=event.payload.currency,
-            failure_reason=None,
+            status=payment.status.value,
+            amount=payment.amount.amount,
+            currency=payment.amount.currency,
+            failure_reason=payment.failure_reason,
             correlation_id=event.correlation_id,
             outbox_event_id=payment_event.event_id,
             outbox_event_type=payment_event.event_type,
@@ -163,36 +177,35 @@ async def _process_payment_once(event: OrderCreatedEvent) -> None:
         logger.info(
             "Payment success event published",
             order_id=str(event.payload.order_id),
-            payment_id=str(payment_event.payload.payment_id),
+            payment_id=str(payment.payment_id.value),
             routing_key=RoutingKey.PAYMENT_SUCCESS,
         )
 
         return
 
-    payment_id = uuid4()
     payment_event = PaymentFailedEvent(
         correlation_id=event.correlation_id,
         trace_id=event.trace_id,
         payload=PaymentFailedPayload(
-            payment_id=payment_id,
+            payment_id=payment.payment_id.value,
             order_id=event.payload.order_id,
             user_id=event.payload.user_id,
-            amount=event.payload.amount,
-            currency=event.payload.currency,
-            reason=decision.failure_reason or "Payment failed",
+            amount=payment.amount.amount,
+            currency=payment.amount.currency,
+            reason=payment.failure_reason or "Payment failed",
         ),
     )
 
     saved = await save_payment_with_outbox_once(
         source_event_id=event.event_id,
         source_event_type=event.event_type,
-        payment_id=payment_id,
+        payment_id=payment.payment_id.value,
         order_id=event.payload.order_id,
         user_id=event.payload.user_id,
-        status=payment_event.payload.status,
-        amount=event.payload.amount,
-        currency=event.payload.currency,
-        failure_reason=payment_event.payload.reason,
+        status=payment.status.value,
+        amount=payment.amount.amount,
+        currency=payment.amount.currency,
+        failure_reason=payment.failure_reason,
         correlation_id=event.correlation_id,
         outbox_event_id=payment_event.event_id,
         outbox_event_type=payment_event.event_type,
@@ -222,7 +235,7 @@ async def _process_payment_once(event: OrderCreatedEvent) -> None:
     logger.warning(
         "Payment failed event published",
         order_id=str(event.payload.order_id),
-        payment_id=str(payment_event.payload.payment_id),
+        payment_id=str(payment.payment_id.value),
         routing_key=RoutingKey.PAYMENT_FAILED,
     )
 
