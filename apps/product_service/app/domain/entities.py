@@ -14,6 +14,7 @@ from apps.product_service.app.domain.value_objects import CategoryId, Money, Pro
 class ProductEntity:
     product_id: ProductId | UUID
     name: str
+    description: str | None
     price: Money | Decimal
     stock_quantity: int
     category: str
@@ -23,6 +24,8 @@ class ProductEntity:
         self.product_id = ProductId.from_value(self.product_id)
         self.price = Money.from_value(self.price)
         self.name = self.name.strip()
+        if self.description is not None:
+            self.description = self.description.strip() or None
         self.category = self.category.strip()
         ensure_product_values(price=self.price.amount, stock_quantity=self.stock_quantity)
         if not self.name:
@@ -34,6 +37,7 @@ class ProductEntity:
         return ProductEntity(
             product_id=self.product_id,
             name=self.name,
+            description=self.description,
             price=self.price,
             stock_quantity=self.stock_quantity,
             category=self.category,

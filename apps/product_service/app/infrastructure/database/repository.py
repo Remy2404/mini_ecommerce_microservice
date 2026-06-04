@@ -37,6 +37,7 @@ def _product_entity(product: Product) -> ProductEntity:
     return ProductEntity(
         product_id=product.id,
         name=product.name,
+        description=product.description,
         price=product.price,
         stock_quantity=product.stock_quantity,
         category=product.category.name,
