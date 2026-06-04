@@ -3,9 +3,9 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from packages.config.settings import settings
 from apps.product_service.app.main import app
 from apps.product_service.app.schemas import ProductResponse
+from apps.product_service.app.infrastructure.config.settings import settings
 
 
 def test_health_endpoint_returns_ok() -> None:
@@ -150,3 +150,4 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
 
     assert response.status_code == 200
     assert "http_request_total" in response.text
+

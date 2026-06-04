@@ -39,3 +39,4 @@ def test_order_service_health_endpoint_without_real_broker_connection() -> None:
 
     assert response.status_code == 200
     assert response.json()["service"] == "order-service"
+

@@ -1,8 +1,8 @@
 # Database Design
 
 Auth, Product, Order, and Payment services use PostgreSQL databases through
-`packages.database.session`. Cart state remains in Valkey because it is a short
-lived cache-style aggregate.
+`libs/ecommerce-database/ecommerce_database/session.py`. Cart state remains in
+Valkey because it is a short lived cache-style aggregate.
 
 ## Ownership
 

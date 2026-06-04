@@ -18,21 +18,31 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
     CartSnapshot,
     CartSnapshotItem,
 )
+from apps.order_service.app.infrastructure.clients.product_catalog_acl import (
+    ProductCatalogQuote,
+)
 from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
     handle_payment_result,
 )
-from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+from apps.payment_service.app.infrastructure.messaging.payment_flow import (
     process_payment,
 )
 from apps.product_service.app.schemas import ProductResponse
-from packages.config.settings import settings
-from packages.contracts.events import (
-    OrderCreatedEvent,
-    OrderCreatedPayload,
+from apps.api_gateway.app.infrastructure.config.settings import (
+    settings as gateway_settings,
+)
+from apps.order_service.app.schemas.events import (
     PaymentFailedEvent,
     PaymentFailedPayload,
     PaymentSuccessEvent,
     PaymentSuccessPayload,
+)
+from apps.payment_service.app.infrastructure.config.settings import (
+    settings as payment_settings,
+)
+from apps.payment_service.app.schemas.events import (
+    OrderCreatedEvent,
+    OrderCreatedPayload,
 )
 
 
@@ -146,6 +156,18 @@ def test_e2e_user_register_product_cart_and_order(monkeypatch) -> None:
             ],
         ),
     )
+    monkeypatch.setattr(
+        order_services,
+        "get_product_quote",
+        lambda product_id: _return_async(
+            ProductCatalogQuote(
+                product_id=product_id,
+                product_name="Trusted Product",
+                unit_price=Decimal("15.00"),
+                stock_quantity=8,
+            )
+        ),
+    )
     monkeypatch.setattr(order_services, "save_order_with_outbox", _async_noop)
     monkeypatch.setattr(order_services, "publish_pending_order_events", _async_noop)
 
@@ -253,27 +275,27 @@ def test_e2e_payment_worker_persists_outbox_and_publishes(monkeypatch) -> None:
     )
 
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.acquire_payment_event_lock",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.acquire_payment_event_lock",
         lambda event_id: _return_async(True),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.asyncio.sleep",
         lambda delay: _return_async(None),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.save_payment_with_outbox_once",
         lambda **kwargs: _return_and_record_async(saved, kwargs, True),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.publish_pending_payment_events",
         lambda limit: _return_and_record_async(published_batches, limit, 1),
     )
-    monkeypatch.setattr(settings, "payment_success_rate", 1.0)
+    monkeypatch.setattr(payment_settings, "payment_success_rate", 1.0)
 
     asyncio.run(process_payment(event))
 
     assert saved[0]["status"] == "SUCCESS"
-    assert saved[0]["routing_key"] == "payment.succeeded.v1"
+    assert saved[0]["routing_key"] == "payment.authorized.v1"
     assert published_batches == [10]
 
 
@@ -284,9 +306,9 @@ def test_e2e_gateway_route_metrics_and_auth(monkeypatch) -> None:
     FakeGatewayAsyncClient.calls = []
     monkeypatch.setattr(proxy.httpx, "AsyncClient", FakeGatewayAsyncClient)
     monkeypatch.setattr(wso2_client, "introspect_access_token", fake_introspection)
-    monkeypatch.setattr(settings, "gateway_auth_enabled", True)
-    monkeypatch.setattr(settings, "gateway_rate_limit_enabled", False)
-    monkeypatch.setattr(settings, "product_service_url", "http://product-service")
+    monkeypatch.setattr(gateway_settings, "gateway_auth_enabled", True)
+    monkeypatch.setattr(gateway_settings, "gateway_rate_limit_enabled", False)
+    monkeypatch.setattr(gateway_settings, "product_service_url", "http://product-service")
 
     with TestClient(gateway_app) as client:
         protected = client.get(
@@ -316,3 +338,4 @@ async def _return_and_record_async(target: list, value, return_value):
 
 async def _return_async(value):
     return value
+

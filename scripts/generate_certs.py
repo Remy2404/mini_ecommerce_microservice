@@ -97,3 +97,4 @@ print("Certificates generated successfully in ./certs")
 print("   - CA_CERT_PATH=certs/ca.pem")
 print("   - CLIENT_CERT_PATH=certs/client.pem")
 print("   - CLIENT_KEY_PATH=certs/client-key.pem")
+

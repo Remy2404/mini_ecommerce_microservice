@@ -8,3 +8,4 @@ class AddCartItemRequest(BaseModel):
 
     product_id: UUID
     quantity: int = Field(gt=0)
+

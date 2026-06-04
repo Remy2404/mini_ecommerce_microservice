@@ -3,8 +3,12 @@
 from uuid import UUID
 
 from apps.product_service.app.schemas import ProductResponse
-from packages.cache.valkey_client import cache_delete, cache_get, cache_set
-from packages.config.settings import settings
+from apps.product_service.app.infrastructure.cache.valkey_client import (
+    cache_delete,
+    cache_get,
+    cache_set,
+)
+from apps.product_service.app.infrastructure.config.settings import settings
 
 
 def _cache_key(product_id: UUID) -> str:
@@ -42,3 +46,4 @@ def delete_product_cache(product_id: UUID) -> None:
         cache_delete(_cache_key(product_id))
     except Exception:
         return
+

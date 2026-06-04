@@ -10,5 +10,6 @@ The order-payment saga is asynchronous and RabbitMQ-backed.
    `CONFIRMED` or `CANCELLED`.
 5. On payment success, Order Service clears the user's cart key from Valkey.
 
-Event DTOs live in `packages/contracts/order` and
-`packages/contracts/payment`. RabbitMQ setup lives in `packages/messaging`.
+Event DTOs live in `libs/ecommerce-contracts/ecommerce_contracts/order` and
+`libs/ecommerce-contracts/ecommerce_contracts/payment`. RabbitMQ setup lives in
+`libs/ecommerce-messaging/ecommerce_messaging`.

@@ -8,3 +8,4 @@ class ProductLookupRejectedError(Exception):
 
 class ProductServiceUnavailableError(Exception):
     """Raised when trusted product data cannot be fetched safely."""
+

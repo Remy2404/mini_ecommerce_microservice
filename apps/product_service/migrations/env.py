@@ -9,7 +9,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from apps.product_service.app.infrastructure.database.models import ProductBase
-from packages.config.settings import settings
+from apps.product_service.app.infrastructure.config.settings import settings
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.products_database_url)
@@ -63,3 +63,4 @@ else:
     import asyncio
 
     asyncio.run(run_migrations_online())
+

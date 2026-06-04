@@ -1,11 +1,15 @@
+"""Gateway token validation entrypoint."""
+
+from __future__ import annotations
+
 import httpx
-from jose import jwt, JWTError
 from fastapi import HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from starlette import status
 
-from packages.config.settings import settings
-from packages.security.jwt_validator import (
+from apps.api_gateway.app.infrastructure.config.settings import settings
+from apps.api_gateway.app.infrastructure.security.jwt_validator import (
     AuthProviderUnavailableError,
     TokenValidationError,
 )
@@ -26,25 +30,25 @@ def _is_jwt_token(token: str) -> bool:
 
 
 async def get_jwks() -> dict:
-    """Fetch and cache WSO2 public keys."""
     global _jwks_cache
-    if not _jwks_cache:
-        async with httpx.AsyncClient(
-            timeout=settings.wso2_request_timeout_seconds,
-            verify=settings.wso2_verify_ssl,
-        ) as client:
-            try:
-                response = await client.get(settings.wso2_jwks_url)
-                response.raise_for_status()
-            except httpx.HTTPError as exc:
-                raise AuthProviderUnavailableError("Unable to fetch WSO2 JWKS") from exc
+    if _jwks_cache:
+        return _jwks_cache
 
-            _jwks_cache = response.json()
+    async with httpx.AsyncClient(
+        timeout=settings.wso2_request_timeout_seconds,
+        verify=settings.wso2_verify_ssl,
+    ) as client:
+        try:
+            response = await client.get(settings.wso2_jwks_url)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise AuthProviderUnavailableError("Unable to fetch WSO2 JWKS") from exc
+
+    _jwks_cache = response.json()
     return _jwks_cache
 
 
 async def introspect_access_token(token: str) -> dict:
-    """Validate an opaque WSO2 access token through the introspection endpoint."""
     try:
         async with httpx.AsyncClient(
             timeout=settings.wso2_request_timeout_seconds,

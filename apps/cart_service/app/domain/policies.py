@@ -11,3 +11,4 @@ def ensure_cart_key(user_id: str) -> str:
 
 def same_product(left: UUID, right: UUID) -> bool:
     return left == right
+

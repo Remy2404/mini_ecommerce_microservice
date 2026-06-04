@@ -4,13 +4,13 @@ from uuid import UUID
 import httpx
 from pydantic import ValidationError
 
+from apps.cart_service.app.infrastructure.config.settings import settings
 from apps.cart_service.app.domain.exceptions import (
     ProductLookupRejectedError,
     ProductNotFoundError,
     ProductServiceUnavailableError,
 )
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse, ProductResponse
+from apps.cart_service.app.schemas.common import ApiResponse, ProductResponse
 
 
 def _product_url(product_id: UUID) -> str:
@@ -51,3 +51,4 @@ async def fetch_product(product_id: UUID) -> ProductResponse:
         raise ProductServiceUnavailableError
 
     return product
+

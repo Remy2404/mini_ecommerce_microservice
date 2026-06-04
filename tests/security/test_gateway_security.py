@@ -6,8 +6,8 @@
 # from apps.api_gateway.app.infrastructure.security import wso2_client
 # from apps.api_gateway.app.main import app as gateway_app
 # from apps.cart_service.app.main import app as cart_app
-# from packages.config.settings import settings
-# from packages.security.jwt_validator import TokenValidationError
+# from ecommerce_config.settings import settings
+# from ecommerce_security.jwt_validator import TokenValidationError
 
 
 # class FakeAsyncClient:
@@ -138,3 +138,4 @@
 
 #     assert first.status_code == 200
 #     assert second.status_code == 429
+

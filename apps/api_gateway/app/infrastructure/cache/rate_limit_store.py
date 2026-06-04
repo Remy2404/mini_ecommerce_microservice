@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Request
 import valkey.asyncio as valkey
 
-from packages.config.settings import settings
+from apps.api_gateway.app.infrastructure.config.settings import settings
 
 _valkey_client: valkey.Valkey | None = None
 
@@ -39,3 +39,4 @@ async def rate_limit(request: Request, token_payload: dict) -> None:
 
     if count > settings.gateway_rate_limit_per_minute:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
+

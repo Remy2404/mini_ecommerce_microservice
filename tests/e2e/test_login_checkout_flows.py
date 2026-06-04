@@ -10,6 +10,7 @@ from pydantic import SecretStr
 
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 from apps.api_gateway.app.infrastructure.security import wso2_client
+from apps.api_gateway.app.infrastructure.config.settings import settings
 from apps.api_gateway.app.main import app as gateway_app
 from apps.auth_service.app.application.services import AuthService
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
@@ -20,8 +21,10 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
     CartSnapshot,
     CartSnapshotItem,
 )
+from apps.order_service.app.infrastructure.clients.product_catalog_acl import (
+    ProductCatalogQuote,
+)
 from apps.product_service.app.schemas import ProductResponse
-from packages.config.settings import settings
 
 
 # ========== Test Data ==========
@@ -313,6 +316,18 @@ def test_e2e_checkout_and_order_creation(monkeypatch) -> None:
         "get_cart_snapshot",
         lambda uid: cart_snapshot,
     )
+    monkeypatch.setattr(
+        order_services,
+        "get_product_quote",
+        lambda product_id: return_async(
+            ProductCatalogQuote(
+                product_id=product_id,
+                product_name=TestData.PRODUCT_NAME,
+                unit_price=TestData.PRODUCT_PRICE,
+                stock_quantity=TestData.PRODUCT_STOCK,
+            )
+        ),
+    )
     monkeypatch.setattr(order_services, "save_order_with_outbox", async_noop)
     monkeypatch.setattr(order_services, "publish_pending_order_events", async_noop)
 
@@ -445,6 +460,18 @@ def test_e2e_complete_user_journey_login_to_order(monkeypatch) -> None:
             ],
         ),
     )
+    monkeypatch.setattr(
+        order_services,
+        "get_product_quote",
+        lambda product_id: return_async(
+            ProductCatalogQuote(
+                product_id=product_id,
+                product_name=TestData.PRODUCT_NAME,
+                unit_price=TestData.PRODUCT_PRICE,
+                stock_quantity=TestData.PRODUCT_STOCK,
+            )
+        ),
+    )
     monkeypatch.setattr(order_services, "save_order_with_outbox", async_noop)
     monkeypatch.setattr(order_services, "publish_pending_order_events", async_noop)
 
@@ -453,3 +480,4 @@ def test_e2e_complete_user_journey_login_to_order(monkeypatch) -> None:
     # Final Verification
     assert order.status == "PENDING"
     assert order.order_id is not None
+

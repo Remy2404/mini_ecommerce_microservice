@@ -1,9 +1,11 @@
 from fastapi import FastAPI, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from packages.config.settings import settings
-from packages.observability.http_metrics import HTTPMetricsMiddleware
-from packages.observability.logging import setup_logging
+from apps.api_gateway.app.infrastructure.config.settings import settings
+from apps.api_gateway.app.infrastructure.observability.http_metrics import (
+    HTTPMetricsMiddleware,
+)
+from apps.api_gateway.app.infrastructure.observability.logging import setup_logging
 from apps.api_gateway.app.middleware.error_handler import ErrorHandlerMiddleware
 from apps.api_gateway.app.middleware.logging import LoggingMiddleware
 from apps.api_gateway.app.api.routes.auth_routes import router as auth_routes_router
@@ -47,3 +49,4 @@ async def metrics() -> Response:
         content=generate_latest(),
         media_type=CONTENT_TYPE_LATEST,
     )
+

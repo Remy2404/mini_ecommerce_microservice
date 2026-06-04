@@ -71,3 +71,4 @@ class WSO2TokenResponse(BaseModel):
     refresh_token: str | None = None
     id_token: str | None = None
     scope: str | None = None
+

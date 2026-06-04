@@ -16,3 +16,4 @@ class CartResponse(BaseModel):
     user_id: str
     items: list[CartItemResponse]
     total_amount: Decimal
+

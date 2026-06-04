@@ -7,3 +7,4 @@ from apps.payment_service.app.infrastructure.database.repository import (
 )
 
 __all__ = ["Payment", "get_payment", "save_payment"]
+

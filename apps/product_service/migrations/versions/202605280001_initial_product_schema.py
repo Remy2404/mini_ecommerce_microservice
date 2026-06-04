@@ -68,3 +68,4 @@ def downgrade() -> None:
     op.drop_table("products")
     op.drop_index("ix_categories_name", table_name="categories")
     op.drop_table("categories")
+

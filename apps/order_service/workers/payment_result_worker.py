@@ -5,3 +5,4 @@ from apps.order_service.app.infrastructure.messaging.payment_result_consumer imp
 
 if __name__ == "__main__":
     asyncio.run(main())
+

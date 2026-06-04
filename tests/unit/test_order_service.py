@@ -5,9 +5,11 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from apps.order_service.app.application import services as order_services
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.order_service.app.main import app
-from packages.config.settings import settings
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 
 OWNER_HEADERS = {AUTHENTICATED_USER_ID_HEADER: "user_123"}
 
@@ -28,7 +30,13 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_create_order_endpoint_returns_created_order() -> None:
-    from apps.order_service.app.infrastructure.clients.cart_client import CartSnapshot
+    from apps.order_service.app.infrastructure.clients.cart_client import (
+        CartSnapshot,
+        CartSnapshotItem,
+    )
+    from apps.order_service.app.infrastructure.clients.product_catalog_acl import (
+        ProductCatalogQuote,
+    )
 
     with (
         patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
@@ -46,7 +54,25 @@ def test_create_order_endpoint_returns_created_order() -> None:
             return_value=CartSnapshot(
                 cart_id="cart_user_123",
                 total_amount=Decimal("150.00"),
-                items=[],
+                items=[
+                    CartSnapshotItem(
+                        product_id=uuid4(),
+                        product_name="Widget",
+                        quantity=1,
+                        unit_price=Decimal("150.00"),
+                        subtotal=Decimal("150.00"),
+                    )
+                ],
+            ),
+        ),
+        patch.object(
+            order_services,
+            "get_product_quote",
+            return_value=ProductCatalogQuote(
+                product_id=uuid4(),
+                product_name="Widget",
+                unit_price=Decimal("150.00"),
+                stock_quantity=8,
             ),
         ),
         patch.object(
@@ -85,9 +111,12 @@ def test_create_order_endpoint_returns_created_order() -> None:
 def test_handle_payment_success_clears_cart(
     mock_setup_tracing, mock_setup_logging, mock_valkey, mock_apply_result
 ) -> None:
-    from packages.contracts.events import PaymentSuccessEvent, PaymentSuccessPayload
     from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
         handle_payment_result,
+    )
+    from apps.order_service.app.schemas.events import (
+        PaymentSuccessEvent,
+        PaymentSuccessPayload,
     )
     import asyncio
 
@@ -244,3 +273,4 @@ def test_metrics_endpoint_returns_prometheus_data() -> None:
 
     assert response.status_code == 200
     assert "http_request_total" in response.text
+

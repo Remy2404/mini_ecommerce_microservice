@@ -50,3 +50,4 @@ def downgrade() -> None:
     op.drop_index("ix_payments_user_id", table_name="payments")
     op.drop_index("ix_payments_order_id", table_name="payments")
     op.drop_table("payments")
+

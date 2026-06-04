@@ -1,17 +1,16 @@
 """Durable outbox publisher for Order Service events."""
 
-from packages.config.settings import settings
-from packages.contracts.order.events import OrderCreatedEvent
-from packages.observability.logging import get_logger
-
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.observability.logging import get_logger
+from apps.order_service.app.infrastructure.messaging.order_event_publisher import (
+    publish_order_created,
+)
 from apps.order_service.app.infrastructure.database.repository import (
     claim_pending_outbox_events,
     mark_outbox_event_failed,
     mark_outbox_event_published,
 )
-from apps.order_service.app.infrastructure.messaging.order_event_publisher import (
-    publish_order_created,
-)
+from apps.order_service.app.schemas.events import OrderCreatedEvent
 
 logger = get_logger(__name__)
 
@@ -26,9 +25,7 @@ async def publish_pending_order_events(limit: int = 25) -> int:
                     f"Unsupported order outbox routing key: {pending.routing_key}"
                 )
 
-            await publish_order_created(
-                OrderCreatedEvent.model_validate(pending.payload)
-            )
+            await publish_order_created(OrderCreatedEvent.model_validate(pending.payload))
             await mark_outbox_event_published(pending.event_id)
             published += 1
         except Exception as exc:

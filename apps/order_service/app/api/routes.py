@@ -2,16 +2,22 @@
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse
-from packages.errors.exceptions import ForbiddenError
-from packages.observability.logging import get_logger
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.order_service.app.domain.exceptions import (
     CartNotFoundError,
     EmptyCartError,
 )
+from apps.order_service.app.infrastructure.config.settings import settings
+from apps.order_service.app.infrastructure.errors.exceptions import (
+    AppError,
+    ForbiddenError,
+    to_http_exception,
+)
+from apps.order_service.app.infrastructure.observability.logging import get_logger
+from apps.order_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.order_service.app.schemas.requests import CreateOrderRequest
+from apps.order_service.app.schemas.common import ApiResponse
 from apps.order_service.app.application.services import (
     create_order_for_user,
     get_all_orders,
@@ -66,6 +72,8 @@ async def create_order(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cart is empty",
         ) from exc
+    except AppError as exc:
+        raise to_http_exception(exc) from exc
 
     return ApiResponse[dict[str, str]](
         success=True,
@@ -126,3 +134,4 @@ async def list_orders(
             user_id=_require_authenticated_user_id(authenticated_user_id),
         ),
     )
+

@@ -6,9 +6,11 @@ from fastapi.testclient import TestClient
 
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
-from packages.config.settings import settings
-from packages.security import wso2_login
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
+from apps.api_gateway.app.infrastructure.config.settings import settings
+from apps.api_gateway.app.infrastructure.security import wso2_login
+from apps.api_gateway.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 
 
 class FakeAsyncClient:
@@ -114,6 +116,8 @@ def test_openapi_includes_explicit_gateway_routes_and_hides_catch_all() -> None:
         ("/api/v1/orders", "get", "Order Gateway"),
         ("/api/v1/orders", "post", "Order Gateway"),
         ("/api/v1/orders/{order_id}", "get", "Order Gateway"),
+        ("/api/v1/payments/{payment_id}", "get", "Payment Gateway"),
+        ("/api/v1/payments/by-order/{order_id}", "get", "Payment Gateway"),
     }
 
     for path, method, tag in expected_routes:
@@ -412,6 +416,11 @@ def test_wso2_login_timeout_or_unavailable_returns_safe_503(monkeypatch) -> None
         ("DELETE", "/api/v1/cart/user_123", "http://cart-service/cart/user_123"),
         ("GET", "/api/v1/orders", "http://order-service/orders"),
         ("GET", "/api/v1/orders/order_123", "http://order-service/orders/order_123"),
+        (
+            "GET",
+            "/api/v1/payments/by-order/order_123",
+            "http://payment-service/payments/by-order/order_123",
+        ),
     ],
 )
 def test_explicit_get_and_delete_routes_proxy_correctly(
@@ -525,3 +534,4 @@ def test_user_owned_post_routes_reject_client_supplied_user_id(
     assert response.status_code == 403
     assert response.json() == {"detail": "Forbidden"}
     assert FakeAsyncClient.calls == []
+

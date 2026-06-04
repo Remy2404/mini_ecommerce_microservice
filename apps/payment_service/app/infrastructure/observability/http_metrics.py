@@ -1,0 +1,56 @@
+import time
+
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from apps.payment_service.app.infrastructure.observability.metrics import (
+    http_request_duration_seconds,
+    http_request_total,
+)
+
+EXCLUDED_PATHS = {
+    "/metrics",
+    "/metrics/",
+    "/health",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+}
+
+
+class HTTPMetricsMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, service_name: str):
+        super().__init__(app)
+        self.service_name = service_name
+
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in EXCLUDED_PATHS:
+            return await call_next(request)
+
+        start_time = time.perf_counter()
+        status_code = 500
+
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        except Exception:
+            status_code = 500
+            raise
+        finally:
+            duration = time.perf_counter() - start_time
+            route = request.scope.get("route")
+            path = route.path if route and hasattr(route, "path") else request.url.path
+
+            http_request_total.labels(
+                service_name=self.service_name,
+                method=request.method,
+                path=path,
+                status_code=str(status_code),
+            ).inc()
+
+            http_request_duration_seconds.labels(
+                service_name=self.service_name,
+                method=request.method,
+                path=path,
+            ).observe(duration)

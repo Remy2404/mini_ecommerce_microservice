@@ -1,7 +1,7 @@
 # Observability
 
 Services share logging, tracing, and metrics helpers from
-`packages.observability`.
+`ecommerce_observability`.
 
 ## Local Endpoints
 

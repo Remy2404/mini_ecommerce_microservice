@@ -18,3 +18,4 @@ class ProductResponse(BaseModel):
     stock_quantity: int
     category: str
     image_url: str | None = None
+

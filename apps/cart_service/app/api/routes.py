@@ -4,13 +4,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from packages.config.settings import settings
-from packages.contracts.common.schemas import ApiResponse
-from packages.observability.logging import get_logger
-from packages.observability.tracing import add_span_attributes
-from packages.security.headers import AUTHENTICATED_USER_ID_HEADER
 from apps.cart_service.app.application import services as cart_service
+from apps.cart_service.app.infrastructure.config.settings import settings
+from apps.cart_service.app.infrastructure.observability.logging import get_logger
+from apps.cart_service.app.infrastructure.observability.tracing import (
+    add_span_attributes,
+)
+from apps.cart_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
 from apps.cart_service.app.schemas import AddCartItemRequest, CartResponse
+from apps.cart_service.app.schemas.common import ApiResponse
 
 router = APIRouter()
 
@@ -144,3 +148,4 @@ async def clear_cart_endpoint(user_id: str) -> ApiResponse[dict[str, str]]:
             "user_id": user_id,
         },
     )
+

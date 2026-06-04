@@ -22,3 +22,11 @@ uv run python -m apps.order_service.workers.payment_result_worker
 
 Use `task run:*` commands when available to avoid duplicate local service
 processes.
+
+To look up a payment after an order is processed, call:
+
+```http
+GET /api/v1/payments/by-order/{order_id}
+```
+
+That returns the `payment_id` along with the payment status and amount.

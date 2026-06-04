@@ -2,7 +2,7 @@
 
 from fastapi import Header, HTTPException, status
 
-from packages.security.jwt_validator import (
+from apps.auth_service.app.infrastructure.security.jwt_validator import (
     AuthProviderUnavailableError,
     TokenValidationError,
     validate_wso2_access_token,
@@ -31,3 +31,4 @@ async def get_current_token_payload(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service unavailable",
         ) from exc
+

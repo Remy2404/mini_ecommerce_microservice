@@ -61,3 +61,4 @@ def test_cart_total_is_calculated_from_items() -> None:
     )
 
     assert cart.total_amount == Decimal("19.00")
+

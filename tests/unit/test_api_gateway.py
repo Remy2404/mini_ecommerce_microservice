@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from apps.api_gateway.app.api.dependencies import (
     validate_token as gateway_validate_token,
 )
-from packages.config.settings import settings
+from apps.api_gateway.app.infrastructure.config.settings import settings
 from apps.api_gateway.app.main import app
 from apps.api_gateway.app.infrastructure.http import proxy_client as proxy
 
@@ -215,6 +215,7 @@ def test_owned_routes_inject_user_id_from_token_sub(monkeypatch) -> None:
             )
             client.get("/api/v1/orders")
             client.get("/api/v1/payments/pay_123")
+            client.get("/api/v1/payments/by-order/order_123")
     finally:
         app.dependency_overrides.clear()
 
@@ -224,6 +225,7 @@ def test_owned_routes_inject_user_id_from_token_sub(monkeypatch) -> None:
     assert forwarded_headers[0]["x-authenticated-user-id"] == "user-from-sub"
     assert forwarded_headers[1]["x-authenticated-user-id"] == "user-from-sub"
     assert forwarded_headers[2]["x-authenticated-user-id"] == "user-from-sub"
+    assert forwarded_headers[3]["x-authenticated-user-id"] == "user-from-sub"
 
 
 def test_owned_post_routes_reject_client_supplied_user_id(monkeypatch) -> None:
@@ -355,3 +357,4 @@ def test_no_open_proxy_behavior(monkeypatch) -> None:
     assert FakeAsyncClient.calls[0]["url"] == (
         "http://product-service/products/http://evil.example/resource"
     )
+

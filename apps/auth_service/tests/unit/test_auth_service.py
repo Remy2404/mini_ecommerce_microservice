@@ -7,13 +7,21 @@ from pydantic import SecretStr
 
 from apps.auth_service.app.api import routes as auth_routes
 from apps.auth_service.app.application.services import AuthService
+from apps.auth_service.app.infrastructure.config.settings import settings
+from apps.auth_service.app.infrastructure.security import wso2_login, wso2_scim
+from apps.auth_service.app.infrastructure.security.passwords import (
+    hash_password,
+    verify_password,
+)
+from apps.auth_service.app.infrastructure.security.wso2_scim import current_user as wso2_scim_current_user
+from apps.auth_service.app.infrastructure.security.wso2_scim import lookup as wso2_scim_lookup
+from apps.auth_service.app.infrastructure.security.wso2_scim import (
+    WSO2SCIMError,
+    register_wso2_user,
+)
 from apps.auth_service.app.main import app
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import RegisterUserResponse
-from packages.config.settings import settings
-from packages.security import wso2_login, wso2_scim
-from packages.security.passwords import hash_password, verify_password
-from packages.security.wso2_scim import WSO2SCIMError, register_wso2_user
 
 
 class FakeWSO2AsyncClient:
@@ -359,7 +367,11 @@ def test_search_users_escapes_filter_injection(monkeypatch) -> None:
         captured.update(kwargs)
         return {"total_results": 0, "start_index": 1, "items_per_page": 0, "users": []}
 
-    monkeypatch.setattr(wso2_scim, "filter_wso2_users", fake_filter_wso2_users)
+    monkeypatch.setattr(
+        wso2_scim_lookup,
+        "filter_wso2_users",
+        fake_filter_wso2_users,
+    )
 
     result = asyncio.run(
         wso2_scim.search_wso2_users(
@@ -470,7 +482,11 @@ def test_current_user_uses_userinfo_when_token_email_is_missing(monkeypatch) -> 
             "email": "ramy@example.com",
         }
 
-    monkeypatch.setattr(wso2_scim, "get_wso2_userinfo", fake_userinfo)
+    monkeypatch.setattr(
+        wso2_scim_current_user,
+        "get_wso2_userinfo",
+        fake_userinfo,
+    )
 
     user = asyncio.run(
         wso2_scim.current_wso2_user(
@@ -504,7 +520,11 @@ def test_current_user_fallback_keeps_legacy_shape(monkeypatch) -> None:
             }
         }
 
-    monkeypatch.setattr(wso2_scim, "get_wso2_user_by_id", fake_get_wso2_user_by_id)
+    monkeypatch.setattr(
+        wso2_scim_current_user,
+        "get_wso2_user_by_id",
+        fake_get_wso2_user_by_id,
+    )
 
     user = asyncio.run(
         wso2_scim.current_wso2_user(
@@ -844,3 +864,4 @@ def test_get_user_route_returns_envelope(monkeypatch) -> None:
     assert response.json()["message"] == "User retrieved successfully"
     assert response.json()["data"]["user"]["id"] == "wso2-user-id"
     assert captured == {"user_id": "wso2-user-id", "request_id": "request-123"}
+

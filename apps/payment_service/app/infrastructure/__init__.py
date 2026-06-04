@@ -1,1 +1,2 @@
 """Payment infrastructure adapters."""
+

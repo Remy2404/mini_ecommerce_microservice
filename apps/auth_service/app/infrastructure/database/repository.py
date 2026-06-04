@@ -10,12 +10,12 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from apps.auth_service.app.infrastructure.config.settings import settings
 from apps.auth_service.app.infrastructure.database.models import (
     User,
     UserProfile,
 )
-from packages.config.settings import settings
-from packages.database.session import session_scope
+from apps.auth_service.app.infrastructure.database.session import session_scope
 
 
 @dataclass(frozen=True)
@@ -75,3 +75,4 @@ class AuthRepository:
             user = User(id=user_id, email=email, password_hash=password_hash)
             session.add(user)
             session.add(UserProfile(user_id=user_id, full_name=full_name))
+

@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from apps.order_service.app.domain.exceptions import CartNotFoundError, EmptyCartError
-from packages.cache.valkey_client import get_valkey_client
+from apps.order_service.app.infrastructure.cache.valkey_client import get_valkey_client
 
 
 @dataclass(frozen=True)
@@ -54,3 +54,4 @@ def get_cart_snapshot(user_id: str) -> CartSnapshot:
 
 def get_cart_total_amount(user_id: str) -> Decimal:
     return get_cart_snapshot(user_id).total_amount
+

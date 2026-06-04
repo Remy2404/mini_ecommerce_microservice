@@ -21,3 +21,4 @@ def test_ci_workflow_uses_uv_cache_and_python_matrix() -> None:
     assert "enable-cache: true" in workflow
     assert "matrix:" in workflow
     assert "python-version: ['3.12']" in workflow
+

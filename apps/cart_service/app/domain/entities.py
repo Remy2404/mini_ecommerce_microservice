@@ -25,3 +25,4 @@ class CartEntity:
     @property
     def total_amount(self) -> Decimal:
         return sum((item.subtotal for item in self.items), Decimal("0"))
+

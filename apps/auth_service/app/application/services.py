@@ -2,7 +2,10 @@
 
 from apps.auth_service.app.schemas.requests import RegisterUserRequest
 from apps.auth_service.app.schemas.responses import RegisterUserResponse
-from packages.security.wso2_scim import register_wso2_user
+from apps.auth_service.app.domain.entities import RegisteredUser
+from apps.auth_service.app.infrastructure.security.wso2_scim import (
+    register_wso2_user,
+)
 
 
 class AuthService:
@@ -12,7 +15,7 @@ class AuthService:
         *,
         request_id: str | None = None,
     ) -> RegisterUserResponse:
-        user = await register_wso2_user(
+        registration_result = await register_wso2_user(
             username=request.username,
             email=str(request.email),
             password=request.password.get_secret_value(),
@@ -20,8 +23,16 @@ class AuthService:
             family_name=request.last_name,
             request_id=request_id,
         )
-        return RegisterUserResponse(**user)
+        user = RegisteredUser.from_registration_result(
+            registration_result,
+            requested_username=request.username,
+            requested_email=str(request.email),
+            first_name=request.first_name,
+            last_name=request.last_name,
+        )
+        return RegisterUserResponse(**user.to_response_payload())
 
 
 def get_auth_service() -> AuthService:
     return AuthService()
+

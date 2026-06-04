@@ -6,3 +6,4 @@ from apps.payment_service.app.application.services import (
 )
 
 __all__ = ["PaymentDecision", "process_fake_payment"]
+

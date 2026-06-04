@@ -14,3 +14,4 @@ class CreateProductRequest(BaseModel):
     price: Decimal = Field(ge=0)
     stock_quantity: int = Field(ge=0)
     category: str = Field(min_length=1, max_length=100)
+
