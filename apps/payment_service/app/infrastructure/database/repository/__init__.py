@@ -11,6 +11,7 @@ from apps.payment_service.app.infrastructure.database.repository.payments import
 )
 from apps.payment_service.app.infrastructure.database.repository.queries import (
     get_payment,
+    get_payment_by_order_id,
 )
 from apps.payment_service.app.infrastructure.database.repository.types import (
     PendingOutboxEvent,
@@ -20,6 +21,7 @@ __all__ = [
     "PendingOutboxEvent",
     "claim_pending_outbox_events",
     "get_payment",
+    "get_payment_by_order_id",
     "mark_outbox_event_failed",
     "mark_outbox_event_published",
     "save_payment",

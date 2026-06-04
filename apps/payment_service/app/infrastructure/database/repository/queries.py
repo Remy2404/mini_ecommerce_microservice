@@ -33,3 +33,25 @@ async def get_payment(payment_id: UUID) -> PaymentResponse | None:
         currency=payment.amount.currency,
         failure_reason=payment.failure_reason,
     )
+
+
+async def get_payment_by_order_id(order_id: UUID) -> PaymentResponse | None:
+    async with session_scope(settings.payments_database_url) as session:
+        result = await session.execute(
+            select(Payment).where(Payment.order_id == order_id)
+        )
+        payment_model = result.scalar_one_or_none()
+
+    if payment_model is None:
+        return None
+
+    payment = PaymentMapper.to_domain(payment_model)
+    return PaymentResponse(
+        payment_id=payment.payment_id.value,
+        order_id=payment.order_id,
+        user_id=payment.user_id,
+        status=payment.status.value,
+        amount=payment.amount.amount,
+        currency=payment.amount.currency,
+        failure_reason=payment.failure_reason,
+    )

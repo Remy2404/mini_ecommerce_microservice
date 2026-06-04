@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 
 class EventType(StrEnum):
     ORDER_CREATED = "order.created.v1"
-    PAYMENT_SUCCESS = "payment.succeeded.v1"
+    PAYMENT_AUTHORIZED = "payment.authorized.v1"
+    PAYMENT_SUCCESS = PAYMENT_AUTHORIZED
     PAYMENT_FAILED = "payment.failed.v1"
     ORDER_CONFIRMED = "order.confirmed.v1"
     ORDER_CANCELLED = "order.cancelled.v1"

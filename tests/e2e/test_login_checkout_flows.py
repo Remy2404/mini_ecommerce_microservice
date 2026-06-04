@@ -21,6 +21,9 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
     CartSnapshot,
     CartSnapshotItem,
 )
+from apps.order_service.app.infrastructure.clients.product_catalog_acl import (
+    ProductCatalogQuote,
+)
 from apps.product_service.app.schemas import ProductResponse
 
 
@@ -313,6 +316,18 @@ def test_e2e_checkout_and_order_creation(monkeypatch) -> None:
         "get_cart_snapshot",
         lambda uid: cart_snapshot,
     )
+    monkeypatch.setattr(
+        order_services,
+        "get_product_quote",
+        lambda product_id: return_async(
+            ProductCatalogQuote(
+                product_id=product_id,
+                product_name=TestData.PRODUCT_NAME,
+                unit_price=TestData.PRODUCT_PRICE,
+                stock_quantity=TestData.PRODUCT_STOCK,
+            )
+        ),
+    )
     monkeypatch.setattr(order_services, "save_order_with_outbox", async_noop)
     monkeypatch.setattr(order_services, "publish_pending_order_events", async_noop)
 
@@ -443,6 +458,18 @@ def test_e2e_complete_user_journey_login_to_order(monkeypatch) -> None:
                     subtotal=cart.items[0].subtotal,
                 )
             ],
+        ),
+    )
+    monkeypatch.setattr(
+        order_services,
+        "get_product_quote",
+        lambda product_id: return_async(
+            ProductCatalogQuote(
+                product_id=product_id,
+                product_name=TestData.PRODUCT_NAME,
+                unit_price=TestData.PRODUCT_PRICE,
+                stock_quantity=TestData.PRODUCT_STOCK,
+            )
         ),
     )
     monkeypatch.setattr(order_services, "save_order_with_outbox", async_noop)

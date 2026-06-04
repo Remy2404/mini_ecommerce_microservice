@@ -32,6 +32,16 @@ class ConflictError(AppError):
         )
 
 
+class ServiceUnavailableError(AppError):
+    def __init__(self, message: str = "Service unavailable", **details: Any) -> None:
+        super().__init__(
+            message=message,
+            error_code="SERVICE_UNAVAILABLE",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details,
+        )
+
+
 class UnauthorizedError(AppError):
     def __init__(self, message: str = "Unauthorized", **details: Any) -> None:
         super().__init__(

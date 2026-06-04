@@ -7,7 +7,11 @@ from apps.order_service.app.domain.exceptions import (
     EmptyCartError,
 )
 from apps.order_service.app.infrastructure.config.settings import settings
-from apps.order_service.app.infrastructure.errors.exceptions import ForbiddenError
+from apps.order_service.app.infrastructure.errors.exceptions import (
+    AppError,
+    ForbiddenError,
+    to_http_exception,
+)
 from apps.order_service.app.infrastructure.observability.logging import get_logger
 from apps.order_service.app.infrastructure.security.headers import (
     AUTHENTICATED_USER_ID_HEADER,
@@ -68,6 +72,8 @@ async def create_order(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cart is empty",
         ) from exc
+    except AppError as exc:
+        raise to_http_exception(exc) from exc
 
     return ApiResponse[dict[str, str]](
         success=True,

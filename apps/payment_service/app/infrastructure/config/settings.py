@@ -51,7 +51,7 @@ class Settings(BaseSettings):
         validation_alias="ORDER_CREATED_ROUTING_KEY",
     )
     payment_success_routing_key: str = Field(
-        "payment.succeeded.v1",
+        "payment.authorized.v1",
         validation_alias="PAYMENT_SUCCESS_ROUTING_KEY",
     )
     payment_failed_routing_key: str = Field(

@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     orders_database_url: str = Field(..., validation_alias="ORDERS_DATABASE_URL")
     valkey_url: str = Field(..., validation_alias="VALKEY_URL")
+    product_service_url: str = Field(
+        "http://localhost:8001",
+        validation_alias="PRODUCT_SERVICE_URL",
+    )
 
     rabbitmq_url: str = Field(..., validation_alias="RABBITMQ_URL")
     rabbitmq_retry_max_attempts: int = Field(

@@ -3,10 +3,17 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
+from fastapi.testclient import TestClient
+
+from apps.payment_service.app.infrastructure.security.headers import (
+    AUTHENTICATED_USER_ID_HEADER,
+)
+from apps.payment_service.app.main import app
 from apps.payment_service.app.infrastructure.messaging.payment_flow import (
     process_payment,
 )
 from apps.payment_service.app.schemas.events import OrderCreatedEvent, OrderCreatedPayload
+from apps.payment_service.app.schemas.responses import PaymentResponse
 
 
 def _order_created_event() -> OrderCreatedEvent:
@@ -52,7 +59,7 @@ def test_process_payment_persists_success_before_publishing() -> None:
     assert saved_payment["failure_reason"] is None
     assert saved_payment["correlation_id"] == event.correlation_id
     assert saved_payment["source_event_id"] == event.event_id
-    assert saved_payment["routing_key"] == "payment.succeeded.v1"
+    assert saved_payment["routing_key"] == "payment.authorized.v1"
     publish_pending_mock.assert_awaited_once()
 
 
@@ -94,4 +101,29 @@ def test_process_payment_persists_failure_before_publishing() -> None:
     assert saved_payment["source_event_id"] == event.event_id
     assert saved_payment["routing_key"] == "payment.failed.v1"
     publish_pending_mock.assert_awaited_once()
+
+
+def test_payment_lookup_by_order_id_returns_payment_id() -> None:
+    mocked_payment = PaymentResponse(
+        payment_id=uuid4(),
+        order_id=uuid4(),
+        user_id="user_123",
+        status="SUCCESS",
+        amount=Decimal("150.00"),
+        currency="USD",
+    )
+
+    with patch(
+        "apps.payment_service.app.api.routes.get_payment_by_order_id",
+        new=AsyncMock(return_value=mocked_payment),
+    ):
+        with TestClient(app) as client:
+            response = client.get(
+                f"/payments/by-order/{mocked_payment.order_id}",
+                headers={AUTHENTICATED_USER_ID_HEADER: mocked_payment.user_id},
+            )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["payment_id"] == str(mocked_payment.payment_id)
+    assert response.json()["data"]["order_id"] == str(mocked_payment.order_id)
 

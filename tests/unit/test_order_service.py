@@ -34,6 +34,9 @@ def test_create_order_endpoint_returns_created_order() -> None:
         CartSnapshot,
         CartSnapshotItem,
     )
+    from apps.order_service.app.infrastructure.clients.product_catalog_acl import (
+        ProductCatalogQuote,
+    )
 
     with (
         patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
@@ -60,6 +63,16 @@ def test_create_order_endpoint_returns_created_order() -> None:
                         subtotal=Decimal("150.00"),
                     )
                 ],
+            ),
+        ),
+        patch.object(
+            order_services,
+            "get_product_quote",
+            return_value=ProductCatalogQuote(
+                product_id=uuid4(),
+                product_name="Widget",
+                unit_price=Decimal("150.00"),
+                stock_quantity=8,
             ),
         ),
         patch.object(

@@ -31,6 +31,10 @@ async def list_orders(
     "",
     status_code=status.HTTP_201_CREATED,
     openapi_extra=swagger_request_body(GatewayCreateOrderRequest),
+    description=(
+        "Create an order for the authenticated user. "
+        "Send an empty JSON object; the gateway injects the user identity from headers."
+    ),
 )
 async def create_order(
     request: Request,

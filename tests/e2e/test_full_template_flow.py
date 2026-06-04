@@ -18,6 +18,9 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
     CartSnapshot,
     CartSnapshotItem,
 )
+from apps.order_service.app.infrastructure.clients.product_catalog_acl import (
+    ProductCatalogQuote,
+)
 from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
     handle_payment_result,
 )
@@ -153,6 +156,18 @@ def test_e2e_user_register_product_cart_and_order(monkeypatch) -> None:
             ],
         ),
     )
+    monkeypatch.setattr(
+        order_services,
+        "get_product_quote",
+        lambda product_id: _return_async(
+            ProductCatalogQuote(
+                product_id=product_id,
+                product_name="Trusted Product",
+                unit_price=Decimal("15.00"),
+                stock_quantity=8,
+            )
+        ),
+    )
     monkeypatch.setattr(order_services, "save_order_with_outbox", _async_noop)
     monkeypatch.setattr(order_services, "publish_pending_order_events", _async_noop)
 
@@ -280,7 +295,7 @@ def test_e2e_payment_worker_persists_outbox_and_publishes(monkeypatch) -> None:
     asyncio.run(process_payment(event))
 
     assert saved[0]["status"] == "SUCCESS"
-    assert saved[0]["routing_key"] == "payment.succeeded.v1"
+    assert saved[0]["routing_key"] == "payment.authorized.v1"
     assert published_batches == [10]
 
 

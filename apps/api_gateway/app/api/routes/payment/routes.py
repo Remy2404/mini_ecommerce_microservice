@@ -21,3 +21,17 @@ async def get_payment(
         request,
         extra_headers=owner_headers(payload),
     )
+
+
+@router.get("/by-order/{order_id}")
+async def get_payment_by_order(
+    order_id: str,
+    request: Request,
+    payload: dict = Depends(enforce_gateway_access),
+):
+    return await forward_request(
+        "payments",
+        f"by-order/{order_id}",
+        request,
+        extra_headers=owner_headers(payload),
+    )

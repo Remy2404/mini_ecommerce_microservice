@@ -151,8 +151,16 @@ class GatewayAddCartItemRequest(BaseModel):
 
 
 class GatewayCreateOrderRequest(BaseModel):
+    """Create an order from the authenticated user's cart.
+
+    This gateway endpoint intentionally accepts an empty JSON object. The
+    authenticated user context is carried in headers, not in the body.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
-        json_schema_extra={"example": {}},
+        json_schema_extra={
+            "example": {},
+        },
     )
 
