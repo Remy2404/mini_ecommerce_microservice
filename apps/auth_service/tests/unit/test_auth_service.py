@@ -13,6 +13,8 @@ from apps.auth_service.app.infrastructure.security.passwords import (
     hash_password,
     verify_password,
 )
+from apps.auth_service.app.infrastructure.security.wso2_scim import current_user as wso2_scim_current_user
+from apps.auth_service.app.infrastructure.security.wso2_scim import lookup as wso2_scim_lookup
 from apps.auth_service.app.infrastructure.security.wso2_scim import (
     WSO2SCIMError,
     register_wso2_user,
@@ -365,7 +367,11 @@ def test_search_users_escapes_filter_injection(monkeypatch) -> None:
         captured.update(kwargs)
         return {"total_results": 0, "start_index": 1, "items_per_page": 0, "users": []}
 
-    monkeypatch.setattr(wso2_scim, "filter_wso2_users", fake_filter_wso2_users)
+    monkeypatch.setattr(
+        wso2_scim_lookup,
+        "filter_wso2_users",
+        fake_filter_wso2_users,
+    )
 
     result = asyncio.run(
         wso2_scim.search_wso2_users(
@@ -476,7 +482,11 @@ def test_current_user_uses_userinfo_when_token_email_is_missing(monkeypatch) -> 
             "email": "ramy@example.com",
         }
 
-    monkeypatch.setattr(wso2_scim, "get_wso2_userinfo", fake_userinfo)
+    monkeypatch.setattr(
+        wso2_scim_current_user,
+        "get_wso2_userinfo",
+        fake_userinfo,
+    )
 
     user = asyncio.run(
         wso2_scim.current_wso2_user(
@@ -510,7 +520,11 @@ def test_current_user_fallback_keeps_legacy_shape(monkeypatch) -> None:
             }
         }
 
-    monkeypatch.setattr(wso2_scim, "get_wso2_user_by_id", fake_get_wso2_user_by_id)
+    monkeypatch.setattr(
+        wso2_scim_current_user,
+        "get_wso2_user_by_id",
+        fake_get_wso2_user_by_id,
+    )
 
     user = asyncio.run(
         wso2_scim.current_wso2_user(

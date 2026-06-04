@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+from apps.payment_service.app.infrastructure.messaging.payment_flow import (
     process_payment,
 )
 from apps.payment_service.app.schemas.events import OrderCreatedEvent, OrderCreatedPayload
@@ -25,19 +25,19 @@ def test_process_payment_persists_success_before_publishing() -> None:
 
     with (
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.asyncio.sleep",
             new=AsyncMock(),
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.random.random",
             return_value=0,
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.save_payment_with_outbox_once",
             new=AsyncMock(return_value=True),
         ) as save_payment_with_outbox_mock,
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.publish_pending_payment_events",
             new=AsyncMock(),
         ) as publish_pending_mock,
     ):
@@ -61,23 +61,23 @@ def test_process_payment_persists_failure_before_publishing() -> None:
 
     with (
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.asyncio.sleep",
             new=AsyncMock(),
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.random.random",
             return_value=1,
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.settings.payment_success_rate",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.settings.payment_success_rate",
             0,
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.save_payment_with_outbox_once",
             new=AsyncMock(return_value=True),
         ) as save_payment_with_outbox_mock,
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.publish_pending_payment_events",
             new=AsyncMock(),
         ) as publish_pending_mock,
     ):

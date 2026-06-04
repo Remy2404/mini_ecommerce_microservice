@@ -20,6 +20,8 @@ class RegisteredUser:
         self.email = EmailAddress.from_value(self.email)
         self.full_name = FullName.from_value(self.full_name)
         self.user_id = str(self.user_id)
+        if not self.user_id.strip():
+            raise ValueError("User id cannot be empty")
         self.message = self.message.strip() or "User registered successfully"
 
     @classmethod

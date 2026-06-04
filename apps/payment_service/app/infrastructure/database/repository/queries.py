@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from apps.payment_service.app.infrastructure.config.settings import settings
 from apps.payment_service.app.infrastructure.database.models import Payment
-from apps.payment_service.app.infrastructure.database.repository.payments import (
+from apps.payment_service.app.infrastructure.database.repository.mapper import (
     PaymentMapper,
 )
 from apps.payment_service.app.infrastructure.database.session import session_scope

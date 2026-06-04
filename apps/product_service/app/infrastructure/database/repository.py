@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from apps.product_service.app.domain.entities import CategoryEntity, ProductEntity
 from apps.product_service.app.infrastructure.config.settings import settings
 from apps.product_service.app.infrastructure.database.session import session_scope
 from apps.product_service.app.infrastructure.database.models import Category, Product
@@ -32,23 +33,42 @@ def _category_response(category: Category) -> CategoryResponse:
     )
 
 
+def _product_entity(product: Product) -> ProductEntity:
+    return ProductEntity(
+        product_id=product.id,
+        name=product.name,
+        price=product.price,
+        stock_quantity=product.stock_quantity,
+        category=product.category.name,
+        image_object_key=product.image_object_key,
+    )
+
+
+def _category_entity(category: Category) -> CategoryEntity:
+    return CategoryEntity(
+        category_id=category.id,
+        name=category.name,
+        description=category.description,
+    )
+
+
 async def create_category(
     *,
     name: str,
     description: str | None,
-) -> CategoryResponse:
+) -> CategoryEntity:
     async with session_scope(settings.products_database_url) as session:
         existing = await _get_category_by_name(session, name)
         if existing is not None:
-            return _category_response(existing)
+            return _category_entity(existing)
 
         category = Category(id=uuid4(), name=name, description=description)
         session.add(category)
         await session.flush()
-        return _category_response(category)
+        return _category_entity(category)
 
 
-async def save_product(product: ProductResponse) -> None:
+async def save_product(product: ProductEntity) -> None:
     async with session_scope(settings.products_database_url) as session:
         category = await _get_category_by_name(session, product.category)
         if category is None:
@@ -56,16 +76,17 @@ async def save_product(product: ProductResponse) -> None:
             session.add(category)
             await session.flush()
 
-        existing = await session.get(Product, product.product_id)
+        existing = await session.get(Product, product.product_id.value)
         if existing is None:
             session.add(
                 Product(
-                    id=product.product_id,
+                    id=product.product_id.value,
                     category_id=category.id,
                     name=product.name,
                     description=product.description,
-                    price=product.price,
+                    price=product.price.amount,
                     stock_quantity=product.stock_quantity,
+                    image_object_key=product.image_object_key,
                 )
             )
             return
@@ -73,11 +94,12 @@ async def save_product(product: ProductResponse) -> None:
         existing.category_id = category.id
         existing.name = product.name
         existing.description = product.description
-        existing.price = product.price
+        existing.price = product.price.amount
         existing.stock_quantity = product.stock_quantity
+        existing.image_object_key = product.image_object_key
 
 
-async def get_product(product_id: UUID) -> ProductResponse | None:
+async def get_product(product_id: UUID) -> ProductEntity | None:
     async with session_scope(settings.products_database_url) as session:
         result = await session.execute(
             select(Product)
@@ -86,10 +108,10 @@ async def get_product(product_id: UUID) -> ProductResponse | None:
         )
         product = result.scalar_one_or_none()
 
-    return _product_response(product) if product else None
+    return _product_entity(product) if product else None
 
 
-async def list_products() -> list[ProductResponse]:
+async def list_products() -> list[ProductEntity]:
     async with session_scope(settings.products_database_url) as session:
         result = await session.execute(
             select(Product)
@@ -99,17 +121,17 @@ async def list_products() -> list[ProductResponse]:
         )
         products = result.scalars().all()
 
-    return [_product_response(product) for product in products]
+    return [_product_entity(product) for product in products]
 
 
-async def list_categories() -> list[CategoryResponse]:
+async def list_categories() -> list[CategoryEntity]:
     async with session_scope(settings.products_database_url) as session:
         result = await session.execute(
             select(Category).where(Category.is_active.is_(True)).order_by(Category.name)
         )
         categories = result.scalars().all()
 
-    return [_category_response(category) for category in categories]
+    return [_category_entity(category) for category in categories]
 
 
 async def _get_category_by_name(session, name: str) -> Category | None:

@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 
+from apps.product_service.app.domain.entities import CategoryEntity, ProductEntity
 from apps.product_service.app.infrastructure.cache.product_cache import (
     get_product_cache,
     set_product_cache,
@@ -15,16 +16,45 @@ from apps.product_service.app.infrastructure.storage import image_processor, obj
 from apps.product_service.app.infrastructure.cache.product_cache import (
     delete_product_cache,
 )
+from apps.product_service.app.infrastructure.storage.object_storage import (
+    build_public_url,
+)
+
+
+def _category_response(category: CategoryEntity) -> CategoryResponse:
+    return CategoryResponse(
+        category_id=category.category_id.value,
+        name=category.name,
+        description=category.description,
+    )
+
+
+def _product_response(product: ProductEntity) -> ProductResponse:
+    return ProductResponse(
+        product_id=product.product_id.value,
+        name=product.name,
+        description=product.description,
+        price=product.price.amount,
+        stock_quantity=product.stock_quantity,
+        category=product.category,
+        image_url=build_public_url(product.image_object_key)
+        if product.image_object_key
+        else None,
+    )
 
 
 async def create_category_for_catalog(
     request: CreateCategoryRequest,
 ) -> CategoryResponse:
-    return await repository.create_category(name=request.name, description=request.description)
+    category = await repository.create_category(
+        name=request.name,
+        description=request.description,
+    )
+    return _category_response(category)
 
 
 async def create_product(request: CreateProductRequest) -> ProductResponse:
-    product = ProductResponse(
+    product = ProductEntity(
         product_id=uuid4(),
         name=request.name,
         description=request.description,
@@ -34,9 +64,10 @@ async def create_product(request: CreateProductRequest) -> ProductResponse:
     )
 
     await repository.save_product(product)
-    set_product_cache(product)
+    response = _product_response(product)
+    set_product_cache(response)
 
-    return product
+    return response
 
 
 async def find_product(product_id: UUID) -> ProductResponse | None:
@@ -46,17 +77,21 @@ async def find_product(product_id: UUID) -> ProductResponse | None:
 
     product = await repository.get_product(product_id)
     if product is not None:
-        set_product_cache(product)
+        response = _product_response(product)
+        set_product_cache(response)
+        return response
 
-    return product
+    return None
 
 
 async def find_products() -> list[ProductResponse]:
-    return await repository.list_products()
+    products = await repository.list_products()
+    return [_product_response(product) for product in products]
 
 
 async def find_categories() -> list[CategoryResponse]:
-    return await repository.list_categories()
+    categories = await repository.list_categories()
+    return [_category_response(category) for category in categories]
 
 
 async def upload_product_image(*, product_id: UUID, data: bytes):

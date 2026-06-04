@@ -52,7 +52,7 @@ def test_order_consumer_skips_duplicate_payment_result_without_clearing_cart() -
 
 
 def test_payment_consumer_skips_duplicate_order_created_after_inbox_record() -> None:
-    from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+    from apps.payment_service.app.infrastructure.messaging.payment_flow import (
         process_payment,
     )
 
@@ -67,23 +67,23 @@ def test_payment_consumer_skips_duplicate_order_created_after_inbox_record() -> 
 
     with (
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.acquire_payment_event_lock",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.acquire_payment_event_lock",
             new=AsyncMock(return_value=True),
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.asyncio.sleep",
             new=AsyncMock(),
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.random.random",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.random.random",
             return_value=0,
         ),
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.save_payment_with_outbox_once",
             new=AsyncMock(side_effect=[True, False]),
         ) as save_once,
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.publish_pending_payment_events",
             new=AsyncMock(),
         ) as publish_pending,
     ):

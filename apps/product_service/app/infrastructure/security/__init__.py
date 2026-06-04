@@ -18,6 +18,9 @@ from apps.product_service.app.infrastructure.security.permissions import (
     require_role,
     require_scope,
 )
+from apps.product_service.app.infrastructure.security.acl import (
+    require_product_image_write_scope,
+)
 
 __all__ = [
     "AUTHENTICATED_USER_ID_HEADER",
@@ -30,7 +33,7 @@ __all__ = [
     "require_owner_or_role",
     "require_role",
     "require_scope",
+    "require_product_image_write_scope",
     "validate_jwt_token",
     "validate_wso2_access_token",
 ]
-

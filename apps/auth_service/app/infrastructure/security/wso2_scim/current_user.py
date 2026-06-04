@@ -3,13 +3,13 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Any, Awaitable, Callable
 
-import httpx
-
 from apps.auth_service.app.infrastructure.config.settings import settings
 
+from . import httpx
 from .client import _log_wso2_event, _safe_wso2_error_code
 from .errors import WSO2SCIMError
 from .mappers import _claim_user_response, _roles_from_token
+from .lookup import get_wso2_user_by_id
 
 
 async def _get_wso2_userinfo(
@@ -108,3 +108,26 @@ async def _current_wso2_user(
         "email": user["email"],
         "roles": user["roles"],
     }
+
+
+async def get_wso2_userinfo(
+    access_token: str,
+    *,
+    request_id: str | None = None,
+) -> dict[str, Any] | None:
+    return await _get_wso2_userinfo(access_token, request_id=request_id)
+
+
+async def current_wso2_user(
+    token_payload: dict[str, Any],
+    *,
+    access_token: str | None = None,
+    request_id: str | None = None,
+) -> dict[str, Any]:
+    return await _current_wso2_user(
+        token_payload,
+        access_token=access_token,
+        request_id=request_id,
+        get_wso2_userinfo_func=get_wso2_userinfo,
+        get_wso2_user_by_id_func=get_wso2_user_by_id,
+    )

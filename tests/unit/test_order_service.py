@@ -30,7 +30,10 @@ def test_health_endpoint_returns_ok() -> None:
 
 
 def test_create_order_endpoint_returns_created_order() -> None:
-    from apps.order_service.app.infrastructure.clients.cart_client import CartSnapshot
+    from apps.order_service.app.infrastructure.clients.cart_client import (
+        CartSnapshot,
+        CartSnapshotItem,
+    )
 
     with (
         patch("apps.order_service.app.main.broker.connect", new=AsyncMock()),
@@ -48,7 +51,15 @@ def test_create_order_endpoint_returns_created_order() -> None:
             return_value=CartSnapshot(
                 cart_id="cart_user_123",
                 total_amount=Decimal("150.00"),
-                items=[],
+                items=[
+                    CartSnapshotItem(
+                        product_id=uuid4(),
+                        product_name="Widget",
+                        quantity=1,
+                        unit_price=Decimal("150.00"),
+                        subtotal=Decimal("150.00"),
+                    )
+                ],
             ),
         ),
         patch.object(

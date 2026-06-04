@@ -13,7 +13,7 @@ from apps.payment_service.app.infrastructure.messaging.broker import (
     payment_success_retry_queue,
     retry_exchange,
 )
-from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+from apps.payment_service.app.infrastructure.messaging.payment_flow import (
     main,
     process_payment,
 )

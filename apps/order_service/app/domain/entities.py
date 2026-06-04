@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from uuid import UUID
 
+from apps.order_service.app.domain.policies import ensure_cart_can_be_ordered
 from apps.order_service.app.domain.value_objects import Money, OrderId, OrderStatusState
 
 
@@ -79,6 +80,14 @@ class Order:
         correlation_id: str = "",
         shipping_address: str | None = None,
     ) -> "Order":
+        ensure_cart_can_be_ordered(
+            total_amount=Money.from_value(total_amount, currency=currency).amount,
+            items_count=len(items),
+        )
+        actual_total = sum((item.subtotal for item in items), Money.zero(currency))
+        expected_total = Money.from_value(total_amount, currency=currency)
+        if actual_total != expected_total:
+            raise ValueError("Order total must match item subtotals")
         return cls(
             order_id=order_id or OrderId.new(),
             user_id=user_id,

@@ -1,79 +1,14 @@
-from typing import Any
-
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request
 
 from apps.api_gateway.app.api.routes._shared import enforce_gateway_access
 from apps.api_gateway.app.infrastructure.http.proxy_client import forward_request
-from apps.api_gateway.app.infrastructure.security.wso2_login import (
-    request_wso2_password_token,
-)
-from apps.api_gateway.app.schemas.requests import (
-    GatewayRegisterUserRequest,
-    WSO2PasswordLoginRequest,
-    swagger_request_body,
-)
 from apps.api_gateway.app.schemas.responses import (
     DetailErrorResponse,
-    GatewayRegisterUserResponse,
     GatewayWso2UserDetailResponse,
     GatewayWso2UsersListResponse,
-    WSO2TokenResponse,
 )
 
 router = APIRouter(prefix="/auth")
-
-
-@router.post(
-    "/register",
-    tags=["WSO2 Gateway"],
-    status_code=status.HTTP_201_CREATED,
-    response_model=GatewayRegisterUserResponse,
-    summary="Register user in WSO2 Identity Server",
-    description=(
-        "Creates a WSO2 Identity Server user through SCIM2. WSO2 client "
-        "credentials stay behind the backend."
-    ),
-    responses={
-        503: {
-            "model": DetailErrorResponse,
-            "description": "WSO2 is unavailable or registration is not configured.",
-        },
-    },
-    openapi_extra=swagger_request_body(GatewayRegisterUserRequest),
-)
-async def register_user(
-    request: Request,
-):
-    return await forward_request("auth", "register", request)
-
-
-@router.post(
-    "/login",
-    tags=["WSO2 Gateway"],
-    response_model=WSO2TokenResponse,
-    summary="Login via WSO2 Identity Server",
-    description=(
-        "Authenticates a WSO2 Identity Server user and returns the WSO2 token "
-        "response. Use the WSO2 username from registration. Copy the full WSO2 "
-        "invitation password exactly, including trailing symbols."
-    ),
-    responses={
-        401: {
-            "model": DetailErrorResponse,
-            "description": "Invalid username or password.",
-        },
-        503: {
-            "model": DetailErrorResponse,
-            "description": "WSO2 is unavailable or the gateway WSO2 client is misconfigured.",
-        },
-    },
-)
-async def login_user(request: WSO2PasswordLoginRequest) -> dict[str, Any]:
-    return await request_wso2_password_token(
-        username=request.username,
-        password=request.password.get_secret_value(),
-        scope=request.scope,
-    )
 
 
 @router.get(

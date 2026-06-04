@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 
 from apps.order_service.app.infrastructure.config.settings import settings
 from apps.order_service.app.infrastructure.database.models import Order as OrderModel
-from apps.order_service.app.infrastructure.database.repository.orders import OrderMapper
+from apps.order_service.app.infrastructure.database.repository.mapper import OrderMapper
 from apps.order_service.app.infrastructure.database.repository.types import (
     OrderRecord,
 )

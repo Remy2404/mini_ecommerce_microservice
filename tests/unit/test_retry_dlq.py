@@ -75,7 +75,7 @@ def test_publish_retry_or_dlq_publishes_retry_metadata(monkeypatch) -> None:
 
 
 def test_payment_consumer_failure_routes_to_dlq_after_retries(monkeypatch) -> None:
-    from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+    from apps.payment_service.app.infrastructure.messaging.payment_flow import (
         process_payment,
     )
     from apps.payment_service.app.infrastructure.config.settings import settings
@@ -94,7 +94,7 @@ def test_payment_consumer_failure_routes_to_dlq_after_retries(monkeypatch) -> No
 
     with (
         patch(
-            "apps.payment_service.app.infrastructure.messaging.order_created_consumer.acquire_payment_event_lock",
+            "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.acquire_payment_event_lock",
             new=AsyncMock(side_effect=RuntimeError("lock backend down")),
         ),
         patch(

@@ -21,7 +21,7 @@ from apps.order_service.app.infrastructure.clients.cart_client import (
 from apps.order_service.app.infrastructure.messaging.payment_result_consumer import (
     handle_payment_result,
 )
-from apps.payment_service.app.infrastructure.messaging.order_created_consumer import (
+from apps.payment_service.app.infrastructure.messaging.payment_flow import (
     process_payment,
 )
 from apps.product_service.app.schemas import ProductResponse
@@ -260,19 +260,19 @@ def test_e2e_payment_worker_persists_outbox_and_publishes(monkeypatch) -> None:
     )
 
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.acquire_payment_event_lock",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.acquire_payment_event_lock",
         lambda event_id: _return_async(True),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.asyncio.sleep",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.processing.asyncio.sleep",
         lambda delay: _return_async(None),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.save_payment_with_outbox_once",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.save_payment_with_outbox_once",
         lambda **kwargs: _return_and_record_async(saved, kwargs, True),
     )
     monkeypatch.setattr(
-        "apps.payment_service.app.infrastructure.messaging.order_created_consumer.publish_pending_payment_events",
+        "apps.payment_service.app.infrastructure.messaging.payment_flow.handlers.publish_pending_payment_events",
         lambda limit: _return_and_record_async(published_batches, limit, 1),
     )
     monkeypatch.setattr(payment_settings, "payment_success_rate", 1.0)
